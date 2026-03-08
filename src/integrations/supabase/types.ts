@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      click_analytics: {
+        Row: {
+          clicked_at: string
+          id: string
+          product_id: string
+          retailer_name: string
+          shoe_model: string
+          user_id: string | null
+        }
+        Insert: {
+          clicked_at?: string
+          id?: string
+          product_id: string
+          retailer_name: string
+          shoe_model: string
+          user_id?: string | null
+        }
+        Update: {
+          clicked_at?: string
+          id?: string
+          product_id?: string
+          retailer_name?: string
+          shoe_model?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      shoe_prices: {
+        Row: {
+          affiliate_url: string
+          created_at: string
+          id: string
+          logo_url: string | null
+          price: number
+          product_id: string
+          product_url: string
+          retailer_name: string
+          stock_status: string
+          updated_at: string
+        }
+        Insert: {
+          affiliate_url: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          price: number
+          product_id: string
+          product_url: string
+          retailer_name: string
+          stock_status?: string
+          updated_at?: string
+        }
+        Update: {
+          affiliate_url?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          price?: number
+          product_id?: string
+          product_url?: string
+          retailer_name?: string
+          stock_status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

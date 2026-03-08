@@ -1,18 +1,14 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ShoppingBag, Check, ExternalLink, Info, ChevronDown, ChevronUp, Tag } from "lucide-react";
 import { products } from "@/data/products";
-import { getMerchantOffers, MerchantOffer } from "@/data/merchants";
+import { fetchMerchantOffers, trackOfferClick, MerchantOffer } from "@/data/merchants";
 import { getProductTechnologies, Technology } from "@/data/technologies";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import RedirectDialog from "@/components/RedirectDialog";
 
 const categoryLabels: Record<string, string> = {
   amorti: "Amorti",
@@ -24,7 +20,6 @@ const categoryLabels: Record<string, string> = {
 
 const TechCard = ({ tech }: { tech: Technology }) => {
   const [expanded, setExpanded] = useState(false);
-
   return (
     <div className="border border-border rounded-xl bg-card overflow-hidden">
       <button
@@ -42,12 +37,7 @@ const TechCard = ({ tech }: { tech: Technology }) => {
       </button>
       <AnimatePresence>
         {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="overflow-hidden"
-          >
+          <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
             <div className="px-4 pb-4 space-y-2">
               <p className="text-sm text-muted-foreground">{tech.description}</p>
               <div className="flex items-start gap-2 bg-primary/5 p-3 rounded-lg">
@@ -80,7 +70,7 @@ const OfferRow = ({ offer, isBest, onBuy }: { offer: MerchantOffer; isBest: bool
       {offer.available ? (
         <Button size="sm" variant={isBest ? "hero" : "outline"} onClick={onBuy}>
           <ExternalLink className="w-3.5 h-3.5" />
-          Acheter
+          Voir l'offre
         </Button>
       ) : (
         <span className="text-xs text-muted-foreground font-medium">Indisponible</span>
@@ -95,19 +85,36 @@ const ProductDetail = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const product = products.find((p) => p.id === id);
-  const offers = id ? getMerchantOffers(id) : [];
   const techs = id ? getProductTechnologies(id) : [];
 
-  const handleBuy = (url: string) => {
+  const [offers, setOffers] = useState<MerchantOffer[]>([]);
+  const [redirect, setRedirect] = useState<{ merchant: string; url: string } | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      fetchMerchantOffers(id).then(setOffers);
+    }
+  }, [id]);
+
+  const handleBuy = (offer: MerchantOffer) => {
     if (!user) {
-      toast({
-        title: "Connexion requise",
-        description: "Connectez-vous pour accéder aux offres d'achat.",
-      });
+      toast({ title: "Connexion requise", description: "Connectez-vous pour accéder aux offres d'achat." });
       navigate("/connexion");
       return;
     }
-    window.open(url, "_blank", "noopener,noreferrer");
+    setRedirect({ merchant: offer.merchant, url: offer.affiliateUrl });
+  };
+
+  const confirmRedirect = () => {
+    if (!redirect || !product) return;
+    trackOfferClick({
+      userId: user?.id ?? null,
+      productId: product.id,
+      retailerName: redirect.merchant,
+      shoeModel: `${product.brand} ${product.model}`,
+    });
+    window.open(redirect.url, "_blank", "noopener,noreferrer");
+    setRedirect(null);
   };
 
   if (!product) {
@@ -125,6 +132,14 @@ const ProductDetail = () => {
 
   return (
     <div className="min-h-screen bg-background" role="main">
+      <RedirectDialog
+        open={!!redirect}
+        merchant={redirect?.merchant ?? ""}
+        url={redirect?.url ?? ""}
+        onConfirm={confirmRedirect}
+        onCancel={() => setRedirect(null)}
+      />
+
       {/* Nav */}
       <div className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container flex items-center h-16">
@@ -139,47 +154,24 @@ const ProductDetail = () => {
         <div className="container max-w-5xl space-y-12">
           {/* Hero grid */}
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
-            {/* Image */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="bg-secondary rounded-2xl overflow-hidden aspect-square flex items-center justify-center"
-            >
-              <img
-                src={product.image}
-                alt={`${product.brand} ${product.model} — chaussure de running`}
-                className="w-full h-full object-contain p-8"
-                loading="lazy"
-              />
+            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-secondary rounded-2xl overflow-hidden aspect-square flex items-center justify-center">
+              <img src={product.image} alt={`${product.brand} ${product.model}`} className="w-full h-full object-contain p-8" loading="lazy" />
             </motion.div>
 
-            {/* Info */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-6"
-            >
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
               <div>
-                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">
-                  {product.brand}
-                </p>
+                <p className="text-sm text-muted-foreground font-medium uppercase tracking-wider">{product.brand}</p>
                 <h1 className="text-4xl font-black tracking-tight mt-1">{product.model}</h1>
                 <div className="flex items-baseline gap-3 mt-3">
                   <p className="text-3xl font-black text-gradient">{product.prix} €</p>
                   {bestPrice && bestPrice < product.prix && (
-                    <span className="text-sm font-semibold text-primary">
-                      dès {bestPrice.toFixed(2)} €
-                    </span>
+                    <span className="text-sm font-semibold text-primary">dès {bestPrice.toFixed(2)} €</span>
                   )}
                 </div>
               </div>
 
-              <p className="text-muted-foreground leading-relaxed text-lg">
-                {product.description}
-              </p>
+              <p className="text-muted-foreground leading-relaxed text-lg">{product.description}</p>
 
-              {/* Specs */}
               <div className="grid grid-cols-2 gap-4">
                 {[
                   { label: "Poids", value: `${product.poids}g` },
@@ -198,7 +190,6 @@ const ProductDetail = () => {
                 ))}
               </div>
 
-              {/* Benefits */}
               <div>
                 <h3 className="font-bold mb-3">Points forts</h3>
                 <div className="space-y-2">
@@ -213,60 +204,44 @@ const ProductDetail = () => {
                 </div>
               </div>
 
-              {/* CTA */}
               <Button
                 variant="hero"
                 size="xl"
                 className="w-full"
                 onClick={() => {
                   const best = offers.find((o) => o.available);
-                  if (best) handleBuy(best.url);
+                  if (best) handleBuy(best);
                 }}
               >
                 <ShoppingBag className="w-5 h-5" />
-                {user ? `Acheter — ${bestPrice?.toFixed(2) || product.prix} €` : "Se connecter pour acheter"}
+                {user ? `Voir la meilleure offre — ${bestPrice?.toFixed(2) || product.prix} €` : "Se connecter pour acheter"}
               </Button>
             </motion.div>
           </div>
 
           {/* Technologies */}
           {techs.length > 0 && (
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-            >
+            <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
               <div className="flex items-center gap-2 mb-6">
                 <Info className="w-5 h-5 text-primary" />
                 <h2 className="text-2xl font-black tracking-tight">Technologies expliquées</h2>
               </div>
               <div className="space-y-3">
-                {techs.map((tech) => (
-                  <TechCard key={tech.name} tech={tech} />
-                ))}
+                {techs.map((tech) => <TechCard key={tech.name} tech={tech} />)}
               </div>
             </motion.section>
           )}
 
           {/* Price comparator */}
           {offers.length > 0 && (
-            <motion.section
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
+            <motion.section initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
               <div className="flex items-center gap-2 mb-6">
                 <Tag className="w-5 h-5 text-primary" />
                 <h2 className="text-2xl font-black tracking-tight">Comparateur de prix</h2>
               </div>
               <div className="space-y-3">
                 {offers.map((offer, i) => (
-                  <OfferRow
-                    key={offer.merchant}
-                    offer={offer}
-                    isBest={i === 0 && offer.available}
-                    onBuy={() => handleBuy(offer.url)}
-                  />
+                  <OfferRow key={offer.merchant} offer={offer} isBest={i === 0 && offer.available} onBuy={() => handleBuy(offer)} />
                 ))}
               </div>
             </motion.section>
