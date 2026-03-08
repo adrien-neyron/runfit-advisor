@@ -7,6 +7,7 @@ import heroShoe from "@/assets/hero-shoe.png";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
