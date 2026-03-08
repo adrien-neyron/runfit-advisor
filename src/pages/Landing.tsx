@@ -17,9 +17,21 @@ const Landing = () => {
           <span className="text-xl font-black tracking-tighter">
             RUN<span className="text-gradient">MATCH</span>
           </span>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/questionnaire")}>
-            Commencer
-          </Button>
+          <div className="flex items-center gap-2">
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                  Déconnexion
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => navigate("/connexion")}>
+                <User className="w-4 h-4" />
+                Connexion
+              </Button>
+            )}
+          </div>
         </div>
       </nav>
 

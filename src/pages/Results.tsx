@@ -178,9 +178,9 @@ const Results = () => {
                       >
                         Détails
                       </Button>
-                      <Button variant="hero">
+                      <Button variant="hero" onClick={() => handleBuy(rec.product.id)}>
                         <ShoppingBag className="w-4 h-4" />
-                        Acheter
+                        {user ? "Acheter" : "Se connecter"}
                       </Button>
                     </div>
                   </div>
