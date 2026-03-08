@@ -28,17 +28,17 @@ const Results = () => {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" role="main">
       {/* Nav */}
       <div className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
         <div className="container flex items-center justify-between h-16">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/questionnaire")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/questionnaire")} aria-label="Retour au questionnaire">
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <span className="font-black tracking-tighter">
             RUN<span className="text-gradient">MATCH</span>
           </span>
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" aria-label="Partager les résultats">
             <Share2 className="w-5 h-5" />
           </Button>
         </div>
@@ -54,15 +54,18 @@ const Results = () => {
           <h1 className="text-3xl md:text-5xl font-black tracking-tight mb-3">
             Vos <span className="text-gradient">recommandations</span>
           </h1>
-          <div className="flex flex-wrap justify-center gap-2 mt-4">
+          <div className="flex flex-wrap justify-center gap-2 mt-4" role="list" aria-label="Votre profil coureur">
             {[
               { label: "Foulée", value: profile.foulee },
               { label: "Terrain", value: profile.terrain },
               { label: "Niveau", value: profile.niveau },
               { label: "Objectif", value: profile.objectif },
+              { label: "Drop", value: profile.dropPreference },
+              { label: "Amorti", value: profile.amortPreference },
             ].map((tag) => (
               <span
                 key={tag.label}
+                role="listitem"
                 className="px-3 py-1.5 rounded-full bg-secondary text-secondary-foreground text-sm font-medium"
               >
                 {tag.label}: {tag.value}
@@ -72,7 +75,7 @@ const Results = () => {
         </motion.div>
 
         {/* Recommendations */}
-        <div className="space-y-6">
+        <div className="space-y-6" role="list" aria-label="Chaussures recommandées">
           {recommendations.length === 0 && revealed && (
             <div className="text-center py-12">
               <p className="text-muted-foreground text-lg mb-4">
@@ -86,8 +89,9 @@ const Results = () => {
           )}
 
           {recommendations.map((rec, i) => (
-            <motion.div
+            <motion.article
               key={rec.product.id}
+              role="listitem"
               initial={{ opacity: 0, y: 40 }}
               animate={revealed ? { opacity: 1, y: 0 } : {}}
               transition={{ delay: i * 0.2, duration: 0.5 }}
@@ -97,11 +101,12 @@ const Results = () => {
                 <div className="md:w-2/5 relative overflow-hidden bg-secondary">
                   <img
                     src={rec.product.image}
-                    alt={rec.product.model}
-                    className="w-full h-56 md:h-full object-cover hover:scale-105 transition-transform duration-500"
+                    alt={`${rec.product.brand} ${rec.product.model} — chaussure de running`}
+                    className="w-full h-56 md:h-full object-contain p-4 hover:scale-105 transition-transform duration-500"
+                    loading="lazy"
                   />
                   {i === 0 && (
-                    <div className="absolute top-4 left-4 px-3 py-1 rounded-full accent-gradient text-primary-foreground text-xs font-bold">
+                    <div className="absolute top-4 left-4 px-3 py-1 rounded-full accent-gradient text-primary-foreground text-xs font-bold" aria-label="Meilleur match">
                       MEILLEUR MATCH
                     </div>
                   )}
@@ -120,10 +125,24 @@ const Results = () => {
                     {rec.product.description}
                   </p>
 
+                  {/* Technical specs */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    {[
+                      { label: "Drop", value: `${rec.product.drop}mm` },
+                      { label: "Poids", value: `${rec.product.poids}g` },
+                      { label: "Amorti", value: rec.product.amorti },
+                    ].map((spec) => (
+                      <div key={spec.label} className="text-center p-2 rounded-lg bg-secondary">
+                        <p className="text-xs text-muted-foreground">{spec.label}</p>
+                        <p className="text-sm font-bold capitalize">{spec.value}</p>
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="space-y-2 mb-6">
                     {rec.reasons.map((reason) => (
                       <div key={reason} className="flex items-center gap-2 text-sm">
-                        <span className="w-1.5 h-1.5 rounded-full accent-gradient flex-shrink-0" />
+                        <span className="w-1.5 h-1.5 rounded-full accent-gradient flex-shrink-0" aria-hidden="true" />
                         <span>{reason}</span>
                       </div>
                     ))}
@@ -146,7 +165,7 @@ const Results = () => {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </motion.article>
           ))}
         </div>
 
