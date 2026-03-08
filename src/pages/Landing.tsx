@@ -107,8 +107,13 @@ const Landing = () => {
 
       {/* Footer */}
       <footer className="py-8 border-t border-border">
-        <div className="container text-center text-sm text-muted-foreground">
-          © 2026 RunMatch. Trouvez votre foulée.
+        <div className="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+          <span>© 2026 RunMatch. Trouvez votre foulée.</span>
+          <div className="flex gap-4">
+            <a href="/confidentialite" className="hover:text-primary transition-colors underline-offset-4 hover:underline">
+              Politique de confidentialité
+            </a>
+          </div>
         </div>
       </footer>
     </div>

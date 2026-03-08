@@ -7,7 +7,9 @@ import Landing from "./pages/Landing";
 import Questionnaire from "./pages/Questionnaire";
 import Results from "./pages/Results";
 import ProductDetail from "./pages/ProductDetail";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 import NotFound from "./pages/NotFound";
+import CookieBanner from "./components/CookieBanner";
 
 const queryClient = new QueryClient();
 
@@ -22,8 +24,10 @@ const App = () => (
           <Route path="/questionnaire" element={<Questionnaire />} />
           <Route path="/resultats" element={<Results />} />
           <Route path="/produit/:id" element={<ProductDetail />} />
+          <Route path="/confidentialite" element={<PrivacyPolicy />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
+        <CookieBanner />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
