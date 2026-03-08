@@ -4,6 +4,9 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, ShoppingBag, Share2, RotateCcw } from "lucide-react";
 import { UserProfile, Recommendation, getRecommendations } from "@/data/products";
+import { getMerchantOffers } from "@/data/merchants";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 import ScoreRing from "@/components/ScoreRing";
 
 const Results = () => {
