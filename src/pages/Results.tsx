@@ -11,9 +11,27 @@ import ScoreRing from "@/components/ScoreRing";
 
 const Results = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [revealed, setRevealed] = useState(false);
+
+  const handleBuy = (productId: string) => {
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Connectez-vous pour accéder aux offres d'achat.",
+      });
+      navigate("/connexion");
+      return;
+    }
+    const offers = getMerchantOffers(productId);
+    const best = offers.find((o) => o.available);
+    if (best) {
+      window.open(best.url, "_blank", "noopener,noreferrer");
+    }
+  };
 
   useEffect(() => {
     const stored = sessionStorage.getItem("runmatch-profile");
