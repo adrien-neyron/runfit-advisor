@@ -1,13 +1,114 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ShoppingBag, Check } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Check, ExternalLink, Info, ChevronDown, ChevronUp, Tag } from "lucide-react";
 import { products } from "@/data/products";
+import { getMerchantOffers, MerchantOffer } from "@/data/merchants";
+import { getProductTechnologies, Technology } from "@/data/technologies";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+const categoryLabels: Record<string, string> = {
+  amorti: "Amorti",
+  plaque: "Plaque",
+  stabilité: "Stabilité",
+  semelle: "Semelle",
+  tige: "Tige",
+};
+
+const TechCard = ({ tech }: { tech: Technology }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="border border-border rounded-xl bg-card overflow-hidden">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between p-4 text-left hover:bg-secondary/50 transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-inset"
+        aria-expanded={expanded}
+      >
+        <div className="flex items-center gap-3">
+          <span className="px-2 py-0.5 rounded-md bg-primary/10 text-primary text-xs font-bold uppercase">
+            {categoryLabels[tech.category] || tech.category}
+          </span>
+          <span className="font-semibold">{tech.name}</span>
+        </div>
+        {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+      </button>
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-2">
+              <p className="text-sm text-muted-foreground">{tech.description}</p>
+              <div className="flex items-start gap-2 bg-primary/5 p-3 rounded-lg">
+                <Check className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                <p className="text-sm font-medium">{tech.benefit}</p>
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">{tech.detail}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const OfferRow = ({ offer, isBest, onBuy }: { offer: MerchantOffer; isBest: boolean; onBuy: () => void }) => (
+  <div className={`flex items-center justify-between p-4 rounded-xl border ${isBest ? "border-primary bg-primary/5" : "border-border bg-card"}`}>
+    <div className="flex items-center gap-3">
+      {isBest && (
+        <span className="px-2 py-0.5 rounded-md accent-gradient text-primary-foreground text-xs font-bold">
+          MEILLEUR PRIX
+        </span>
+      )}
+      <span className="font-semibold">{offer.merchant}</span>
+    </div>
+    <div className="flex items-center gap-4">
+      <span className={`font-black text-lg ${!offer.available ? "text-muted-foreground line-through" : ""}`}>
+        {offer.price.toFixed(2)} €
+      </span>
+      {offer.available ? (
+        <Button size="sm" variant={isBest ? "hero" : "outline"} onClick={onBuy}>
+          <ExternalLink className="w-3.5 h-3.5" />
+          Acheter
+        </Button>
+      ) : (
+        <span className="text-xs text-muted-foreground font-medium">Indisponible</span>
+      )}
+    </div>
+  </div>
+);
 
 const ProductDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { toast } = useToast();
   const product = products.find((p) => p.id === id);
+  const offers = id ? getMerchantOffers(id) : [];
+  const techs = id ? getProductTechnologies(id) : [];
+
+  const handleBuy = (url: string) => {
+    if (!user) {
+      toast({
+        title: "Connexion requise",
+        description: "Connectez-vous pour accéder aux offres d'achat.",
+      });
+      navigate("/connexion");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   if (!product) {
     return (
@@ -19,6 +120,8 @@ const ProductDetail = () => {
       </div>
     );
   }
+
+  const bestPrice = offers.find((o) => o.available)?.price;
 
   return (
     <div className="min-h-screen bg-background" role="main">
@@ -33,7 +136,8 @@ const ProductDetail = () => {
       </div>
 
       <div className="pt-20 pb-16">
-        <div className="container max-w-5xl">
+        <div className="container max-w-5xl space-y-12">
+          {/* Hero grid */}
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
             {/* Image */}
             <motion.div
@@ -61,7 +165,14 @@ const ProductDetail = () => {
                   {product.brand}
                 </p>
                 <h1 className="text-4xl font-black tracking-tight mt-1">{product.model}</h1>
-                <p className="text-3xl font-black text-gradient mt-3">{product.prix} €</p>
+                <div className="flex items-baseline gap-3 mt-3">
+                  <p className="text-3xl font-black text-gradient">{product.prix} €</p>
+                  {bestPrice && bestPrice < product.prix && (
+                    <span className="text-sm font-semibold text-primary">
+                      dès {bestPrice.toFixed(2)} €
+                    </span>
+                  )}
+                </div>
               </div>
 
               <p className="text-muted-foreground leading-relaxed text-lg">
@@ -103,12 +214,63 @@ const ProductDetail = () => {
               </div>
 
               {/* CTA */}
-              <Button variant="hero" size="xl" className="w-full">
+              <Button
+                variant="hero"
+                size="xl"
+                className="w-full"
+                onClick={() => {
+                  const best = offers.find((o) => o.available);
+                  if (best) handleBuy(best.url);
+                }}
+              >
                 <ShoppingBag className="w-5 h-5" />
-                Ajouter au panier — {product.prix} €
+                {user ? `Acheter — ${bestPrice?.toFixed(2) || product.prix} €` : "Se connecter pour acheter"}
               </Button>
             </motion.div>
           </div>
+
+          {/* Technologies */}
+          {techs.length > 0 && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+            >
+              <div className="flex items-center gap-2 mb-6">
+                <Info className="w-5 h-5 text-primary" />
+                <h2 className="text-2xl font-black tracking-tight">Technologies expliquées</h2>
+              </div>
+              <div className="space-y-3">
+                {techs.map((tech) => (
+                  <TechCard key={tech.name} tech={tech} />
+                ))}
+              </div>
+            </motion.section>
+          )}
+
+          {/* Price comparator */}
+          {offers.length > 0 && (
+            <motion.section
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+            >
+              <div className="flex items-center gap-2 mb-6">
+                <Tag className="w-5 h-5 text-primary" />
+                <h2 className="text-2xl font-black tracking-tight">Comparateur de prix</h2>
+              </div>
+              <div className="space-y-3">
+                {offers.map((offer, i) => (
+                  <OfferRow
+                    key={offer.merchant}
+                    offer={offer}
+                    isBest={i === 0 && offer.available}
+                    onBuy={() => handleBuy(offer.url)}
+                  />
+                ))}
+              </div>
+            </motion.section>
+          )}
         </div>
       </div>
     </div>

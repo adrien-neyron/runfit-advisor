@@ -1,11 +1,13 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Target, Shield } from "lucide-react";
+import { ArrowRight, Zap, Target, Shield, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import heroShoe from "@/assets/hero-shoe.png";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
 
   return (
     <div className="min-h-screen bg-background overflow-hidden">
@@ -15,9 +17,21 @@ const Landing = () => {
           <span className="text-xl font-black tracking-tighter">
             RUN<span className="text-gradient">MATCH</span>
           </span>
-          <Button variant="ghost" size="sm" onClick={() => navigate("/questionnaire")}>
-            Commencer
-          </Button>
+          <div className="flex items-center gap-2">
+            {user ? (
+              <>
+                <span className="text-sm text-muted-foreground hidden sm:inline">{user.email}</span>
+                <Button variant="ghost" size="sm" onClick={() => signOut()}>
+                  Déconnexion
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" onClick={() => navigate("/connexion")}>
+                <User className="w-4 h-4" />
+                Connexion
+              </Button>
+            )}
+          </div>
         </div>
       </nav>
 
