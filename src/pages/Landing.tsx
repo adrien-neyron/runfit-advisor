@@ -1,7 +1,8 @@
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Zap, Target, Shield } from "lucide-react";
+import { ArrowRight, Zap, Target, Shield, User } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 import heroShoe from "@/assets/hero-shoe.png";
 
 const Landing = () => {
