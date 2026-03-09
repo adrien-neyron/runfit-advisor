@@ -46,6 +46,7 @@ export type Database = {
           affiliate_url: string
           created_at: string
           id: string
+          last_checked_at: string | null
           logo_url: string | null
           price: number
           product_id: string
@@ -53,11 +54,13 @@ export type Database = {
           retailer_name: string
           stock_status: string
           updated_at: string
+          url_status: string | null
         }
         Insert: {
           affiliate_url: string
           created_at?: string
           id?: string
+          last_checked_at?: string | null
           logo_url?: string | null
           price: number
           product_id: string
@@ -65,11 +68,13 @@ export type Database = {
           retailer_name: string
           stock_status?: string
           updated_at?: string
+          url_status?: string | null
         }
         Update: {
           affiliate_url?: string
           created_at?: string
           id?: string
+          last_checked_at?: string | null
           logo_url?: string | null
           price?: number
           product_id?: string
@@ -77,6 +82,7 @@ export type Database = {
           retailer_name?: string
           stock_status?: string
           updated_at?: string
+          url_status?: string | null
         }
         Relationships: []
       }
