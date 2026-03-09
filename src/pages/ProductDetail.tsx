@@ -2,7 +2,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, ShoppingBag, Check, ExternalLink, Info, ChevronDown, ChevronUp, Tag, AlertTriangle } from "lucide-react";
+import { ArrowLeft, ShoppingBag, Check, ExternalLink, Info, ChevronDown, ChevronUp, Tag } from "lucide-react";
 import { products } from "@/data/products";
 import { fetchMerchantOffers, trackOfferClick, MerchantOffer } from "@/data/merchants";
 import { getProductTechnologies, Technology } from "@/data/technologies";
