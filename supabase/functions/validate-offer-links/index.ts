@@ -12,7 +12,6 @@ type OfferRow = {
   product_url: string;
   affiliate_url: string;
   fallback_url: string | null;
-  url_status: string | null;
 };
 
 function buildFallbackUrl(retailerName: string, productId: string): string {
@@ -64,7 +63,7 @@ Deno.serve(async (req) => {
 
     let query = admin
       .from("shoe_prices")
-      .select("id, product_id, retailer_name, product_url, affiliate_url, fallback_url, url_status")
+      .select("id, product_id, retailer_name, product_url, affiliate_url, fallback_url")
       .order("price", { ascending: true })
       .limit(limit);
 
@@ -78,7 +77,7 @@ Deno.serve(async (req) => {
     const results: Array<{ id: string; urlStatus: string; statusCode: number; affiliateUrl: string; fallbackUrl: string | null }> = [];
 
     for (const offer of offers) {
-      const checkedUrl = offer.affiliate_url || offer.product_url;
+      const checkedUrl = offer.product_url || offer.affiliate_url;
       const fallback = buildFallbackUrl(offer.retailer_name, offer.product_id);
 
       let statusCode = 0;
@@ -90,8 +89,9 @@ Deno.serve(async (req) => {
       try {
         statusCode = await getStatusCode(checkedUrl);
 
-        if (statusCode >= 200 && statusCode < 400) {
+        if ((statusCode >= 200 && statusCode < 400) || statusCode === 401 || statusCode === 403 || statusCode === 429) {
           urlStatus = "valid";
+          resolvedAffiliateUrl = offer.product_url;
         } else if (statusCode === 404 || statusCode === 410) {
           urlStatus = "fallback";
           resolvedAffiliateUrl = fallback;
@@ -150,3 +150,4 @@ Deno.serve(async (req) => {
     });
   }
 });
+
