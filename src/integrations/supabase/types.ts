@@ -41,11 +41,60 @@ export type Database = {
         }
         Relationships: []
       }
+      link_validation_logs: {
+        Row: {
+          checked_at: string
+          checked_url: string
+          error_message: string | null
+          id: string
+          product_id: string
+          resolved_url: string | null
+          result: string
+          retailer_name: string
+          shoe_price_id: string
+          status_code: number | null
+        }
+        Insert: {
+          checked_at?: string
+          checked_url: string
+          error_message?: string | null
+          id?: string
+          product_id: string
+          resolved_url?: string | null
+          result: string
+          retailer_name: string
+          shoe_price_id: string
+          status_code?: number | null
+        }
+        Update: {
+          checked_at?: string
+          checked_url?: string
+          error_message?: string | null
+          id?: string
+          product_id?: string
+          resolved_url?: string | null
+          result?: string
+          retailer_name?: string
+          shoe_price_id?: string
+          status_code?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "link_validation_logs_shoe_price_id_fkey"
+            columns: ["shoe_price_id"]
+            isOneToOne: false
+            referencedRelation: "shoe_prices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       shoe_prices: {
         Row: {
           affiliate_url: string
           created_at: string
+          fallback_url: string | null
           id: string
+          last_checked_at: string | null
           logo_url: string | null
           price: number
           product_id: string
@@ -53,11 +102,14 @@ export type Database = {
           retailer_name: string
           stock_status: string
           updated_at: string
+          url_status: string | null
         }
         Insert: {
           affiliate_url: string
           created_at?: string
+          fallback_url?: string | null
           id?: string
+          last_checked_at?: string | null
           logo_url?: string | null
           price: number
           product_id: string
@@ -65,11 +117,14 @@ export type Database = {
           retailer_name: string
           stock_status?: string
           updated_at?: string
+          url_status?: string | null
         }
         Update: {
           affiliate_url?: string
           created_at?: string
+          fallback_url?: string | null
           id?: string
+          last_checked_at?: string | null
           logo_url?: string | null
           price?: number
           product_id?: string
@@ -77,6 +132,7 @@ export type Database = {
           retailer_name?: string
           stock_status?: string
           updated_at?: string
+          url_status?: string | null
         }
         Relationships: []
       }

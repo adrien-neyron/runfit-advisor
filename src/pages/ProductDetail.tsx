@@ -61,6 +61,11 @@ const OfferRow = ({ offer, isBest, onBuy }: { offer: MerchantOffer; isBest: bool
           MEILLEUR PRIX
         </span>
       )}
+      {offer.urlStatus === "fallback" && (
+        <span className="px-2 py-0.5 rounded-md bg-secondary text-secondary-foreground text-xs font-bold">
+          LIEN ALTERNATIF
+        </span>
+      )}
       <span className="font-semibold">{offer.merchant}</span>
     </div>
     <div className="flex items-center gap-4">
@@ -73,7 +78,7 @@ const OfferRow = ({ offer, isBest, onBuy }: { offer: MerchantOffer; isBest: bool
           Voir l'offre
         </Button>
       ) : (
-        <span className="text-xs text-muted-foreground font-medium">Indisponible</span>
+        <span className="text-xs text-muted-foreground font-medium">Cette offre n’est plus disponible. Nous vous proposons d’autres marchands.</span>
       )}
     </div>
   </div>
@@ -102,6 +107,22 @@ const ProductDetail = () => {
       navigate("/connexion");
       return;
     }
+
+    if (!offer.available || !offer.affiliateUrl) {
+      toast({
+        title: "Offre indisponible",
+        description: "Cette offre n’est plus disponible. Nous vous proposons d’autres marchands.",
+      });
+      return;
+    }
+
+    if (offer.urlStatus === "fallback") {
+      toast({
+        title: "Lien produit mis à jour",
+        description: "La page exacte n'est plus disponible, redirection vers une recherche du modèle chez ce marchand.",
+      });
+    }
+
     setRedirect({ merchant: offer.merchant, url: offer.affiliateUrl });
   };
 
