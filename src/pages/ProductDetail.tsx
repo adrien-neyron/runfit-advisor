@@ -78,7 +78,7 @@ const OfferRow = ({ offer, isBest, onBuy }: { offer: MerchantOffer; isBest: bool
           Voir l'offre
         </Button>
       ) : (
-        <span className="text-xs text-muted-foreground font-medium">Cette offre n’est plus disponible. Nous vous proposons d’autres marchands.</span>
+        <span className="text-xs text-muted-foreground font-medium">Cette chaussure n’est plus disponible chez ce marchand. Nous vous proposons d’autres marchands.</span>
       )}
     </div>
   </div>
@@ -111,7 +111,7 @@ const ProductDetail = () => {
     if (!offer.available || !offer.affiliateUrl) {
       toast({
         title: "Offre indisponible",
-        description: "Cette offre n’est plus disponible. Nous vous proposons d’autres marchands.",
+        description: "Cette chaussure n’est plus disponible chez ce marchand. Nous vous proposons d’autres marchands.",
       });
       return;
     }

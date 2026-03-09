@@ -12,13 +12,19 @@ type OfferRow = {
   product_url: string;
   affiliate_url: string;
   fallback_url: string | null;
+  last_checked_at: string | null;
+};
+
+type UrlProbeResult = {
+  statusCode: number;
+  bodySnippet: string;
 };
 
 function buildFallbackUrl(retailerName: string, productId: string): string {
   const q = encodeURIComponent(productId.replace(/-/g, " "));
   const n = retailerName.toLowerCase();
 
-  if (n.includes("i-run") || n.includes("irun")) return `https://www.i-run.fr/recherche.html?text=${q}`;
+  if (n.includes("i-run") || n.includes("irun")) return `https://www.i-run.fr/recherche?q=${q}`;
   if (n.includes("alltricks")) return `https://www.alltricks.fr/s?search=${q}`;
   if (n.includes("amazon")) return `https://www.amazon.fr/s?k=${q}%20chaussure%20running`;
   if (n.includes("decathlon")) return `https://www.decathlon.fr/search?Ntt=${q}`;
@@ -26,16 +32,32 @@ function buildFallbackUrl(retailerName: string, productId: string): string {
   return `https://www.google.com/search?q=${encodeURIComponent(`${retailerName} ${productId.replace(/-/g, " ")} running`)}`;
 }
 
-async function getStatusCode(url: string): Promise<number> {
+function isSoft404(content: string): boolean {
+  const normalized = content.toLowerCase();
+  return [
+    "page introuvable",
+    "produit n'existe pas",
+    "produit indisponible",
+    "n'est plus disponible",
+    "erreur 404",
+    "404 not found",
+    "the page you were looking for",
+  ].some((needle) => normalized.includes(needle));
+}
+
+async function probeUrl(url: string): Promise<UrlProbeResult> {
   try {
     const head = await fetch(url, { method: "HEAD", redirect: "follow" });
-    if (head.status !== 405) return head.status;
+    if (head.status !== 405 && head.status !== 403) {
+      return { statusCode: head.status, bodySnippet: "" };
+    }
   } catch (_) {
     // fallback to GET
   }
 
   const get = await fetch(url, { method: "GET", redirect: "follow" });
-  return get.status;
+  const bodySnippet = await get.text().then((txt) => txt.slice(0, 2500)).catch(() => "");
+  return { statusCode: get.status, bodySnippet };
 }
 
 Deno.serve(async (req) => {
@@ -60,10 +82,11 @@ Deno.serve(async (req) => {
     const productId: string | undefined = body?.productId;
     const offerIds: string[] = Array.isArray(body?.offerIds) ? body.offerIds : [];
     const limit: number = typeof body?.limit === "number" ? Math.min(Math.max(body.limit, 1), 100) : 50;
+    const maxAgeMinutes: number = typeof body?.maxAgeMinutes === "number" ? Math.max(body.maxAgeMinutes, 0) : 360;
 
     let query = admin
       .from("shoe_prices")
-      .select("id, product_id, retailer_name, product_url, affiliate_url, fallback_url")
+      .select("id, product_id, retailer_name, product_url, affiliate_url, fallback_url, last_checked_at")
       .order("price", { ascending: true })
       .limit(limit);
 
@@ -73,7 +96,13 @@ Deno.serve(async (req) => {
     const { data, error } = await query;
     if (error) throw error;
 
-    const offers = (data ?? []) as OfferRow[];
+    const now = Date.now();
+    const offers = ((data ?? []) as OfferRow[]).filter((offer) => {
+      if (!offer.last_checked_at) return true;
+      const ageMs = now - new Date(offer.last_checked_at).getTime();
+      return ageMs >= maxAgeMinutes * 60 * 1000;
+    });
+
     const results: Array<{ id: string; urlStatus: string; statusCode: number; affiliateUrl: string; fallbackUrl: string | null }> = [];
 
     for (const offer of offers) {
@@ -82,20 +111,31 @@ Deno.serve(async (req) => {
 
       let statusCode = 0;
       let urlStatus = "broken";
-      let resolvedAffiliateUrl = checkedUrl;
+      let resolvedAffiliateUrl = offer.affiliate_url || offer.product_url || "";
       let resolvedFallbackUrl: string | null = null;
       let errorMessage: string | null = null;
 
       try {
-        statusCode = await getStatusCode(checkedUrl);
+        const probe = await probeUrl(checkedUrl);
+        statusCode = probe.statusCode;
+        const retailer = offer.retailer_name.toLowerCase();
 
-        if ((statusCode >= 200 && statusCode < 400) || statusCode === 401 || statusCode === 403 || statusCode === 429) {
+        if (statusCode >= 200 && statusCode < 400 && !isSoft404(probe.bodySnippet)) {
           urlStatus = "valid";
-          resolvedAffiliateUrl = offer.product_url;
-        } else if (statusCode === 404 || statusCode === 410) {
+          resolvedAffiliateUrl = offer.affiliate_url || offer.product_url;
+        } else if (statusCode === 404 || statusCode === 410 || isSoft404(probe.bodySnippet)) {
           urlStatus = "fallback";
           resolvedAffiliateUrl = fallback;
           resolvedFallbackUrl = fallback;
+        } else if ((statusCode === 401 || statusCode === 403 || statusCode === 429) && (retailer.includes("i-run") || retailer.includes("irun"))) {
+          // i-Run bloque souvent les robots: pour éviter les faux positifs, on bascule sur une recherche marchand.
+          urlStatus = "fallback";
+          resolvedAffiliateUrl = fallback;
+          resolvedFallbackUrl = fallback;
+        } else if (statusCode >= 200 && statusCode < 500) {
+          // Cas intermédiaire non bloquant pour les autres marchands.
+          urlStatus = "valid";
+          resolvedAffiliateUrl = offer.affiliate_url || offer.product_url;
         } else {
           urlStatus = "fallback";
           resolvedAffiliateUrl = fallback;
@@ -115,6 +155,7 @@ Deno.serve(async (req) => {
           affiliate_url: resolvedAffiliateUrl,
           fallback_url: resolvedFallbackUrl,
           last_checked_at: new Date().toISOString(),
+          last_verified_at: new Date().toISOString(),
         })
         .eq("id", offer.id);
 

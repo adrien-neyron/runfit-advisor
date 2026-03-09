@@ -92,14 +92,17 @@ export type Database = {
         Row: {
           affiliate_url: string
           created_at: string
+          currency: string
           fallback_url: string | null
           id: string
           last_checked_at: string | null
+          last_verified_at: string | null
           logo_url: string | null
           price: number
           product_id: string
           product_url: string
           retailer_name: string
+          shoe_model_id: string | null
           stock_status: string
           updated_at: string
           url_status: string | null
@@ -107,14 +110,17 @@ export type Database = {
         Insert: {
           affiliate_url: string
           created_at?: string
+          currency?: string
           fallback_url?: string | null
           id?: string
           last_checked_at?: string | null
+          last_verified_at?: string | null
           logo_url?: string | null
           price: number
           product_id: string
           product_url: string
           retailer_name: string
+          shoe_model_id?: string | null
           stock_status?: string
           updated_at?: string
           url_status?: string | null
@@ -122,14 +128,17 @@ export type Database = {
         Update: {
           affiliate_url?: string
           created_at?: string
+          currency?: string
           fallback_url?: string | null
           id?: string
           last_checked_at?: string | null
+          last_verified_at?: string | null
           logo_url?: string | null
           price?: number
           product_id?: string
           product_url?: string
           retailer_name?: string
+          shoe_model_id?: string | null
           stock_status?: string
           updated_at?: string
           url_status?: string | null
