@@ -107,6 +107,22 @@ const ProductDetail = () => {
       navigate("/connexion");
       return;
     }
+
+    if (!offer.available || !offer.affiliateUrl) {
+      toast({
+        title: "Offre indisponible",
+        description: "Cette offre n’est plus disponible. Nous vous proposons d’autres marchands.",
+      });
+      return;
+    }
+
+    if (offer.urlStatus === "fallback") {
+      toast({
+        title: "Lien produit mis à jour",
+        description: "La page exacte n'est plus disponible, redirection vers une recherche du modèle chez ce marchand.",
+      });
+    }
+
     setRedirect({ merchant: offer.merchant, url: offer.affiliateUrl });
   };
 
