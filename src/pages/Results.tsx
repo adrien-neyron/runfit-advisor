@@ -8,6 +8,7 @@ import { fetchMerchantOffers, trackOfferClick, MerchantOffer } from "@/data/merc
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import ScoreRing from "@/components/ScoreRing";
+import ShoeImage from "@/components/ShoeImage";
 import RedirectDialog from "@/components/RedirectDialog";
 
 const Results = () => {
@@ -69,7 +70,11 @@ const Results = () => {
 
     // Fetch best offer for each recommendation
     recs.forEach((rec) => {
-      fetchMerchantOffers(rec.product.id).then((offers) => {
+      fetchMerchantOffers(rec.product.id, {
+        brand: rec.product.brand,
+        model: rec.product.model,
+        basePrice: rec.product.prix,
+      }).then((offers) => {
         const best = offers.find((o) => o.available) ?? null;
         setBestOffers((prev) => ({ ...prev, [rec.product.id]: best }));
       });
@@ -143,7 +148,7 @@ const Results = () => {
               >
                 <div className="flex flex-col md:flex-row">
                   <div className="md:w-2/5 relative overflow-hidden bg-secondary">
-                    <img src={rec.product.image} alt={`${rec.product.brand} ${rec.product.model}`} className="w-full h-56 md:h-full object-contain p-4 hover:scale-105 transition-transform duration-500" loading="lazy" />
+                    <ShoeImage src={rec.product.image} alt={`${rec.product.brand} ${rec.product.model}`} className="w-full h-56 md:h-full object-contain p-4 hover:scale-105 transition-transform duration-500" loading="lazy" />
                     {i === 0 && (
                       <div className="absolute top-4 left-4 px-3 py-1 rounded-full accent-gradient text-primary-foreground text-xs font-bold">MEILLEUR MATCH</div>
                     )}

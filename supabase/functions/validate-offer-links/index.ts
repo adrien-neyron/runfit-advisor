@@ -20,16 +20,63 @@ type UrlProbeResult = {
   bodySnippet: string;
 };
 
+/**
+ * Détecte si une URL est déjà une URL de recherche (toujours valide pour un utilisateur).
+ * Ces URLs ne doivent PAS être remplacées par un fallback même si la probe renvoie une erreur.
+ */
+function isSearchUrl(url: string): boolean {
+  return (
+    url.includes("/s?") ||
+    url.includes("?q=") ||
+    url.includes("?k=") ||
+    url.includes("?search=") ||
+    url.includes("?Ntt=") ||
+    url.includes("?query=") ||
+    url.includes("/search?") ||
+    url.includes("/recherche?") ||
+    url.includes("catalogsearch/result") ||
+    url.includes("google.com/search")
+  );
+}
+
 function buildFallbackUrl(retailerName: string, productId: string): string {
   const q = encodeURIComponent(productId.replace(/-/g, " "));
   const n = retailerName.toLowerCase();
 
+  // Retailers spécialisés running
   if (n.includes("i-run") || n.includes("irun")) return `https://www.i-run.fr/recherche?q=${q}`;
-  if (n.includes("alltricks")) return `https://www.alltricks.fr/s?search=${q}`;
-  if (n.includes("amazon")) return `https://www.amazon.fr/s?k=${q}%20chaussure%20running`;
-  if (n.includes("decathlon")) return `https://www.decathlon.fr/search?Ntt=${q}`;
+  if (n.includes("running collective") || n.includes("therunningcollective")) return `https://www.therunningcollective.fr/recherche?q=${q}`;
+  if (n.includes("running addict") || n.includes("runningaddict")) return `https://www.runningaddict.fr/catalogsearch/result/?q=${q}`;
 
-  return `https://www.google.com/search?q=${encodeURIComponent(`${retailerName} ${productId.replace(/-/g, " ")} running`)}`;
+  // Outdoor / multisport
+  if (n.includes("alltricks")) return `https://www.alltricks.fr/s?search=${q}`;
+  if (n.includes("ekosport")) return `https://www.ekosport.fr/catalogsearch/result/?q=${q}`;
+
+  // Grandes surfaces sport
+  if (n.includes("decathlon")) return `https://www.decathlon.fr/search?Ntt=${q}`;
+  if (n.includes("intersport")) return `https://www.intersport.fr/catalogsearch/result/?q=${q}`;
+  if (n.includes("sport 2000") || n.includes("sport2000")) return `https://www.sport2000.fr/search?q=${q}`;
+
+  // Distribution généraliste sport
+  if (n.includes("courir")) return `https://www.courir.com/search?q=${q}`;
+  if (n.includes("foot locker") || n.includes("footlocker")) return `https://www.footlocker.fr/search?query=${q}`;
+  if (n.includes("jd sports") || n.includes("jdsports")) return `https://www.jdsports.fr/search/jd/${q}/`;
+
+  // Amazon (affiliation)
+  if (n.includes("amazon")) return `https://www.amazon.fr/s?k=${q}+chaussure+running&i=sporting&tag=runfit-21`;
+
+  // Marques en direct
+  if (n.includes("nike")) return `https://www.nike.com/fr/search?q=${q}`;
+  if (n.includes("asics")) return `https://www.asics.com/fr/fr-fr/search?q=${q}`;
+  if (n.includes("brooks")) return `https://www.brooksrunning.com/fr_fr/search?q=${q}`;
+  if (n.includes("hoka")) return `https://www.hoka.com/fr-fr/search?q=${q}`;
+  if (n.includes("salomon")) return `https://www.salomon.com/fr-fr/search?q=${q}`;
+  if (n.includes("new balance") || n.includes("newbalance")) return `https://www.newbalance.fr/search?q=${q}`;
+  if (n.includes("saucony")) return `https://www.saucony.com/fr/search?q=${q}`;
+  if (n.includes("mizuno")) return `https://www.mizuno.com/eu/fr/search?q=${q}`;
+
+  // Fallback Google Shopping ciblé running
+  return `https://www.google.com/search?q=${encodeURIComponent(`${productId.replace(/-/g, " ")} running site:${retailerName.toLowerCase().replace(/\s/g, "")}.fr OR site:${retailerName.toLowerCase().replace(/\s/g, "")}.com`)}`;
 }
 
 function isSoft404(content: string): boolean {
@@ -116,6 +163,24 @@ Deno.serve(async (req) => {
       let errorMessage: string | null = null;
 
       try {
+        // Si l'URL est déjà une URL de recherche, on la marque directement comme valide
+        // sans sonder le site (évite les faux positifs dus aux anti-bots).
+        if (isSearchUrl(checkedUrl)) {
+          urlStatus = "valid";
+          resolvedAffiliateUrl = offer.affiliate_url || checkedUrl;
+          statusCode = 200;
+
+          await admin.from("shoe_prices").update({
+            url_status: "valid",
+            affiliate_url: resolvedAffiliateUrl,
+            last_checked_at: new Date().toISOString(),
+            last_verified_at: new Date().toISOString(),
+          }).eq("id", offer.id);
+
+          results.push({ id: offer.id, urlStatus: "valid", statusCode: 200, affiliateUrl: resolvedAffiliateUrl, fallbackUrl: null });
+          continue;
+        }
+
         const probe = await probeUrl(checkedUrl);
         statusCode = probe.statusCode;
         const retailer = offer.retailer_name.toLowerCase();
