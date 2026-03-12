@@ -63,6 +63,9 @@ const Landing = () => {
                 Trouver ma chaussure
                 <ArrowRight className="w-5 h-5" />
               </Button>
+              <Button variant="hero-outline" size="xl" onClick={() => navigate("/shoes")}>
+                Catalogue
+              </Button>
             </div>
           </motion.div>
 
