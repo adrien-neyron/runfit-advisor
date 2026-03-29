@@ -180,7 +180,7 @@ const ShoeDetail = () => {
           {/* Hero */}
           <div className="grid md:grid-cols-2 gap-8 lg:gap-12">
             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="bg-secondary rounded-2xl overflow-hidden aspect-square flex items-center justify-center">
-              <img src={product.image} alt={`${product.brand} ${product.model}`} className="w-full h-full object-contain p-8" loading="eager" />
+              <img src={imageUrl} alt={`${product.brand} ${product.model}`} className="w-full h-full object-contain p-8" loading="eager" />
             </motion.div>
 
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="space-y-6">
