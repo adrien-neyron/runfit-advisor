@@ -89,6 +89,7 @@ const ShoeDetail = () => {
   const { toast } = useToast();
 
   const product = products.find((p) => p.id === slug);
+  const imageUrl = useShoeImage(slug ?? "", product?.image ?? "");
   const techs = slug ? getProductTechnologies(slug) : [];
   const related = slug ? getRelatedProducts(slug) : [];
 
