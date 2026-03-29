@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import CookieBanner from "./components/CookieBanner";
 import ShoeCatalog from "./pages/ShoeCatalog";
 import ShoeDetail from "./pages/ShoeDetail";
+import AdminImages from "./pages/AdminImages";
 
 const queryClient = new QueryClient();
 
