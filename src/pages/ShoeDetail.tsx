@@ -8,6 +8,7 @@ import { products, getRelatedProducts } from "@/data/products";
 import { fetchMerchantOffers, trackOfferClick, MerchantOffer } from "@/data/merchants";
 import { getProductTechnologies, Technology } from "@/data/technologies";
 import { useAuth } from "@/contexts/AuthContext";
+import { useShoeImage } from "@/hooks/useShoeImage";
 import { useToast } from "@/hooks/use-toast";
 import RedirectDialog from "@/components/RedirectDialog";
 
