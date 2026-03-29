@@ -88,6 +88,33 @@ export type Database = {
           },
         ]
       }
+      shoe_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          id: string
+          product_id: string
+          storage_path: string
+          updated_at: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          product_id: string
+          storage_path: string
+          updated_at?: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          id?: string
+          product_id?: string
+          storage_path?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       shoe_prices: {
         Row: {
           affiliate_url: string
