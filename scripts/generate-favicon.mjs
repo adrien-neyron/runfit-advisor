@@ -22,26 +22,42 @@ const SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
       <stop offset="100%" stop-color="#E53535"/>
     </linearGradient>
   </defs>
-
-  <!-- Fond arrondi -->
   <rect width="100" height="100" rx="22" fill="url(#bg)"/>
 
-  <!-- Chaussure de running stylisée — semelle + upper + empeigne -->
-  <!-- Semelle épaisse -->
-  <path d="M12 68 C12 68 14 74 22 74 L80 74 C86 74 88 70 88 67 C88 64 85 62 80 62 L52 62 C46 60 42 54 38 50 C34 46 28 44 22 46 C16 48 12 55 12 62 Z"
-        fill="white"/>
+  <!--
+    Chaussure de running — profil gauche (talon à gauche, orteil à droite)
 
-  <!-- Upper (tige de la chaussure) -->
-  <path d="M22 46 C28 44 36 46 42 54 C46 60 52 62 58 62 L74 62 C74 62 72 52 62 48 C52 44 44 42 36 38 C30 35 22 36 18 40 C15 43 16 47 22 46 Z"
-        fill="white" opacity="0.92"/>
+    Architecture :
+      1. Semelle outsole  — rectangle arrondi bas
+      2. Tige (upper)     — forme avec côté gauche vertical (talon),
+                            dessus courbe talon→pointe, côté droit arrondi (toe box)
+      3. Trou du col      — découpe fill-rule evenodd, ovale en haut-gauche
+      4. Bande latérale   — détail décoratif
+  -->
 
-  <!-- Lacets (3 bandes horizontales) -->
-  <line x1="36" y1="58" x2="50" y2="60" stroke="#FF6B1A" stroke-width="2.5" stroke-linecap="round"/>
-  <line x1="40" y1="53" x2="54" y2="56" stroke="#FF6B1A" stroke-width="2.5" stroke-linecap="round"/>
-  <line x1="44" y1="48" x2="57" y2="51" stroke="#FF6B1A" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- 1. Semelle outsole (bande épaisse bas) -->
+  <rect x="10" y="72" width="80" height="12" rx="6" fill="white"/>
 
-  <!-- Swoosh / bande latérale -->
-  <path d="M22 64 C30 61 42 63 54 65" stroke="#FF6B1A" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.8"/>
+  <!-- 2. Tige + 3. Trou de col (evenodd = vrai trou) -->
+  <path fill-rule="evenodd" fill="white" d="
+    M 10 72
+    L 10 40
+    C 10 30 18 22 28 24
+    C 42 24 58 34 74 48
+    C 82 54 90 62 90 72
+    Z
+
+    M 14 40
+    C 14 32 20 26 28 26
+    C 24 32 20 42 20 56
+    C 17 50 14 46 14 40
+    Z
+  "/>
+
+  <!-- 4. Bande latérale (swoosh style) -->
+  <path d="M 32 68 C 50 62 68 62 84 68"
+        stroke="#FF6B1A" stroke-width="4.5"
+        fill="none" stroke-linecap="round" opacity="0.8"/>
 </svg>`
 
 // ── Génération des fichiers ───────────────────────────────────────────────────
