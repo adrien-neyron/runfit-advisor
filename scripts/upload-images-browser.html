@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>RunFit — Upload images chaussures</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f0f0f; color: #e5e5e5; padding: 24px; }
+    h1 { font-size: 1.4rem; font-weight: 700; margin-bottom: 4px; color: #fff; }
+    p.sub { font-size: 0.85rem; color: #888; margin-bottom: 24px; }
+    #controls { display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+    button { padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; font-weight: 600; transition: opacity .15s; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+    #startBtn { background: #22c55e; color: #000; }
+    #stopBtn  { background: #ef4444; color: #fff; }
+    #retryBtn { background: #f59e0b; color: #000; }
+    .progress-bar { height: 6px; background: #222; border-radius: 3px; margin-bottom: 24px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; background: #22c55e; border-radius: 3px; transition: width .3s; }
+    #stats { font-size: 0.85rem; color: #aaa; margin-bottom: 16px; }
+    #stats span { font-weight: 700; }
+    #stats .ok { color: #22c55e; }
+    #stats .err { color: #ef4444; }
+    #stats .skip { color: #f59e0b; }
+    #log { background: #111; border: 1px solid #222; border-radius: 10px; padding: 16px; max-height: 500px; overflow-y: auto; font-size: 0.82rem; font-family: 'SF Mono', 'Fira Code', monospace; }
+    .log-ok   { color: #22c55e; }
+    .log-err  { color: #ef4444; }
+    .log-skip { color: #f59e0b; }
+    .log-info { color: #60a5fa; }
+    .log-line { margin-bottom: 4px; line-height: 1.5; }
+    #summary { margin-top: 16px; padding: 16px; background: #111; border: 1px solid #222; border-radius: 10px; display: none; }
+    #summary h2 { font-size: 1rem; margin-bottom: 8px; }
+    #summary pre { font-size: 0.8rem; color: #aaa; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+
+<h1>🏃 RunFit — Upload images vers Supabase Storage</h1>
+<p class="sub">Ouvre cette page dans ton navigateur. Les images sont téléchargées depuis les CDN officiels des marques et uploadées vers ton bucket <strong>shoe-images</strong>.</p>
+
+<div id="controls">
+  <button id="startBtn" onclick="start()">▶ Démarrer l'upload</button>
+  <button id="stopBtn" onclick="stop()" disabled>■ Arrêter</button>
+  <button id="retryBtn" onclick="retryFailed()" disabled>↩ Réessayer les échecs</button>
+</div>
+
+<div class="progress-bar"><div class="progress-bar-fill" id="progressFill" style="width:0%"></div></div>
+
+<div id="stats">
+  <span class="ok">✓ <span id="cntOk">0</span></span> &nbsp;
+  <span class="err">✗ <span id="cntErr">0</span></span> &nbsp;
+  <span class="skip">~ <span id="cntSkip">0</span> ignorés</span> &nbsp;
+  / <span id="cntTotal">0</span> total
+</div>
+
+<div id="log"></div>
+<div id="summary"><h2>Résumé des échecs</h2><pre id="summaryContent"></pre></div>
+
+<!-- ── Section manuelle pour les marques bloquées ── -->
+<div style="margin-top:32px; padding:20px; background:#111; border:1px solid #333; border-radius:10px;">
+  <h2 style="font-size:1rem; margin-bottom:8px; color:#fff;">🔧 Upload manuel — Nike / Adidas / Brooks / New Balance</h2>
+  <p style="font-size:0.82rem; color:#888; margin-bottom:16px;">
+    Ces marques bloquent les téléchargements automatiques.<br>
+    Visite leur page produit, <strong>clic droit → "Copier l'adresse de l'image"</strong>, colle-la ci-dessous.
+  </p>
+  <div id="manualShoes"></div>
+</div>
+
+<script>
+const MANUAL_SHOES = [
+  { id: 'nike-pegasus-41',          label: 'Nike Air Zoom Pegasus 41',   link: 'https://www.nike.com/fr/t/air-zoom-pegasus-41' },
+  { id: 'nike-vaporfly-3',          label: 'Nike ZoomX Vaporfly 3',       link: 'https://www.nike.com/fr/t/zoomx-vaporfly-next-3' },
+  { id: 'nike-invincible-3',        label: 'Nike Air Zoom Invincible 3',  link: 'https://www.nike.com/fr/t/air-zoom-invincible-run-flyknit-3' },
+  { id: 'adidas-ultraboost-light',  label: 'Adidas Ultraboost Light',     link: 'https://www.adidas.fr/chaussures-ultraboost-light/GY9350.html' },
+  { id: 'adidas-adizero-adios-pro-3', label: 'Adidas Adizero Adios Pro 3', link: 'https://www.adidas.fr/chaussures-adizero-adios-pro-3/GY8196.html' },
+  { id: 'brooks-ghost-16',          label: 'Brooks Ghost 16',             link: 'https://www.amazon.fr/BROOKS-Homme-Ghost-16-Sneaker/dp/B0CGYXL78H/ref=asc_df_B0CGYXL78H?tag=bingshoppin0f-21&linkCode=df0&hvadid=79852242860364&hvnetw=o&hvqmt=e&hvbmt=be&hvdev=c&hvlocint=&hvlocphy=126299&hvtargid=pla-4583451725434863&psc=1&msclkid=bb905f3fb6a41f890fd236f6c1b20432' },
+  { id: 'brooks-glycerin-21',       label: 'Brooks Glycerin 21',          link: 'https://www.brooksrunning.com/fr_fr/glycerin-21/110412.html' },
+  { id: 'brooks-adrenaline-gts-23', label: 'Brooks Adrenaline GTS 23',   link: 'https://www.brooksrunning.com/fr_fr/adrenaline-gts-23/120381.html' },
+  { id: 'brooks-cascadia-17',       label: 'Brooks Cascadia 17',          link: 'https://www.brooksrunning.com/fr_fr/cascadia-17/110393.html' },
+  { id: 'new-balance-fresh-foam',   label: 'New Balance Fresh Foam 1080v13', link: 'https://www.newbalance.fr/fr/pd/fresh-foam-x-1080v13/' },
+  { id: 'new-balance-860v14',       label: 'New Balance Fresh Foam 860v14', link: 'https://www.newbalance.fr/fr/pd/fresh-foam-x-860v14/' },
+];
+
+const container = document.getElementById('manualShoes');
+MANUAL_SHOES.forEach(shoe => {
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;';
+  row.innerHTML = `
+    <a href="${shoe.link}" target="_blank" style="color:#60a5fa;font-size:0.82rem;min-width:200px;text-decoration:none;">
+      🔗 ${shoe.label}
+    </a>
+    <input type="text" placeholder="Colle l'URL de l'image ici..." id="inp-${shoe.id}"
+      style="flex:1;min-width:200px;padding:8px 12px;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#e5e5e5;font-size:0.82rem;" />
+    <button onclick="uploadManual('${shoe.id}')" id="btn-${shoe.id}"
+      style="padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:0.82rem;font-weight:600;">
+      Upload
+    </button>
+    <span id="status-${shoe.id}" style="font-size:0.8rem;"></span>
+  `;
+  container.appendChild(row);
+});
+
+async function uploadManual(shoeId) {
+  const inp = document.getElementById('inp-' + shoeId);
+  const btn = document.getElementById('btn-' + shoeId);
+  const statusEl = document.getElementById('status-' + shoeId);
+  const url = inp.value.trim();
+  if (!url) { statusEl.textContent = '⚠️ URL manquante'; return; }
+
+  btn.disabled = true;
+  statusEl.textContent = '⏳ Téléchargement...';
+  statusEl.style.color = '#f59e0b';
+
+  try {
+    // Essai direct puis proxy
+    let blob, ct;
+    try {
+      const r = await fetch(url, { mode: 'cors' });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      ct = r.headers.get('content-type') || 'image/jpeg';
+      blob = await r.blob();
+    } catch {
+      const r2 = await fetch('https://api.allorigins.win/raw?url=' + encodeURIComponent(url));
+      if (!r2.ok) throw new Error('Proxy ' + r2.status);
+      ct = r2.headers.get('content-type') || 'image/jpeg';
+      blob = await r2.blob();
+    }
+
+    if (blob.size < 500) throw new Error('Image trop petite');
+    statusEl.textContent = '⏳ Upload Storage...';
+
+    const ext = ct.includes('webp') ? 'webp' : ct.includes('png') ? 'png' : 'jpg';
+    const filePath = shoeId + '.' + ext;
+    const uploadRes = await fetch(SUPABASE_URL + '/storage/v1/object/' + BUCKET + '/' + filePath, {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY, 'Content-Type': ct, 'x-upsert': 'true' },
+      body: blob,
+    });
+    if (!uploadRes.ok) throw new Error('Upload ' + uploadRes.status);
+
+    const publicUrl = STORAGE_PUBLIC_BASE + '/' + filePath;
+    const dbRes = await fetch(SUPABASE_URL + '/rest/v1/shoes?id=eq.' + shoeId, {
+      method: 'PATCH',
+      headers: { 'Authorization': 'Bearer ' + SERVICE_ROLE_KEY, 'apikey': SERVICE_ROLE_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ image_url: publicUrl, image_storage_path: filePath }),
+    });
+    if (!dbRes.ok) throw new Error('DB ' + dbRes.status);
+
+    statusEl.textContent = '✅ Uploadé !';
+    statusEl.style.color = '#22c55e';
+    inp.style.borderColor = '#22c55e';
+  } catch (e) {
+    statusEl.textContent = '❌ ' + e.message;
+    statusEl.style.color = '#ef4444';
+    btn.disabled = false;
+  }
+}
+</script>
+
+<script>
+// ──────────────────────────────────────────────────────────────────
+// CONFIG — ne pas partager ce fichier en production
+// ──────────────────────────────────────────────────────────────────
+const SUPABASE_URL    = 'https://pdpmmahwzxkytstoaxjb.supabase.co';
+const SERVICE_ROLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBkcG1tYWh3enhreXRzdG9heGpiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3MzA4ODY1OCwiZXhwIjoyMDg4NjY0NjU4fQ.cztcZXJbX__BhF7PIVTjmotHDe3-A4Z9Dy6BqLYpoEs';
+const BUCKET          = 'shoe-images';
+
+const STORAGE_PUBLIC_BASE = `${SUPABASE_URL}/storage/v1/object/public/${BUCKET}`;
+
+// ──────────────────────────────────────────────────────────────────
+// Liste des chaussures à uploader
+// ──────────────────────────────────────────────────────────────────
+const SHOES = [
+  { id: 'nike-pegasus-41',          url: 'https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco/0868a654-c3e9-4342-a64a-5b45df7a8ad8/NIKE+PEGASUS+41.png' },
+  { id: 'nike-vaporfly-3',          url: 'https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco/b1bcddbe-3024-4e5d-b756-fbb1e4763a2b/NIKE+ZOOMX+VAPORFLY+NEXT%25+3.png' },
+  { id: 'nike-invincible-3',        url: 'https://static.nike.com/a/images/t_PDP_1728_v1/f_auto,q_auto:eco/dc4e60e4-1769-44df-a184-b07f2ab11bab/NIKE+AIR+ZOOM+INVINCIBLE+3.png' },
+  { id: 'hoka-clifton-9',           url: 'https://img.therunningcollective.fr/hoka-one-one-clifton-9-m-1160x725-BCAN.webp' },
+  { id: 'hoka-bondi-8',             url: 'https://img.therunningcollective.fr/hoka-one-one-bondi-8-m-1160x725-BWHT.webp' },
+  { id: 'hoka-speedgoat-6',         url: 'https://img.therunningcollective.fr/hoka-one-one-speedgoat-6-m-1160x725-CFDR.webp' },
+  { id: 'hoka-challenger-7',        url: 'https://img.therunningcollective.fr/hoka-one-one-challenger-atr-7-m-1160x725-MMPB.webp' },
+  { id: 'adidas-ultraboost-light',  url: 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/4ccb32f14e134ccca2edaf8d017b6f0c_9366/Ultraboost_Light_Shoes_White_GY9350_01_standard.jpg' },
+  { id: 'adidas-adizero-adios-pro-3', url: 'https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/adizero-adios-pro-3-shoes/adidas-adizero-adios-pro-3-m-01-standard.jpg' },
+  { id: 'brooks-ghost-16',          url: 'https://www.brooksrunning.com/dw/image/v2/BGPF_PRD/on/demandware.static/-/Sites-brooks-master-catalog/default/dw1e8c5a92/images/110418/110418_071_l_Ghost16.png' },
+  { id: 'brooks-glycerin-21',       url: 'https://www.brooksrunning.com/dw/image/v2/BGPF_PRD/on/demandware.static/-/Sites-brooks-master-catalog/default/dw5c4b4e97/images/110412/110412_012_l_Glycerin21.png' },
+  { id: 'brooks-adrenaline-gts-23', url: 'https://www.brooksrunning.com/dw/image/v2/BGPF_PRD/on/demandware.static/-/Sites-brooks-master-catalog/default/dw1e8c5a92/images/120381/120381_416_l_AdrenalineGTS23.png' },
+  { id: 'brooks-cascadia-17',       url: 'https://www.brooksrunning.com/dw/image/v2/BGPF_PRD/on/demandware.static/-/Sites-brooks-master-catalog/default/dw8c3af210/images/110393/110393_407_l_Cascadia17.png' },
+  { id: 'new-balance-fresh-foam',   url: 'https://nb.scene7.com/is/image/NB/m1080v13_nb_02_i?$pdpflexF2$&qlt=80&fmt=webp&wid=440&hei=440' },
+  { id: 'new-balance-860v14',       url: 'https://nb.scene7.com/is/image/NB/m860v14_nb_02_i?$pdpflexF2$&qlt=80&fmt=webp&wid=440&hei=440' },
+  { id: 'salomon-speedcross-6',     url: 'https://img.therunningcollective.fr/salomon-speedcross-6-m-1160x725-LC.webp' },
+  { id: 'salomon-ultra-glide',      url: 'https://img.therunningcollective.fr/salomon-ultra-glide-2-m-1160x725-780B72.webp' },
+  { id: 'saucony-endorphin-speed',  url: 'https://img.therunningcollective.fr/saucony-endorphin-speed-4-m-1160x725-9A3E30.webp' },
+  { id: 'saucony-kinvara-14',       url: 'https://img.therunningcollective.fr/saucony-kinvara-14-m-1160x725-VISC.webp' },
+  { id: 'saucony-guide-17',         url: 'https://img.therunningcollective.fr/saucony-guide-17-m-1160x725-ORCH.webp' },
+  { id: 'saucony-peregrine-14',     url: 'https://img.therunningcollective.fr/saucony-peregrine-14-m-1160x725-VRTL.webp' },
+  { id: 'mizuno-wave-rider',        url: 'https://img.therunningcollective.fr/mizuno-wave-rider-28-m-1160x725-0A0101.webp' },
+  { id: 'on-cloudmonster-2',        url: 'https://img.therunningcollective.fr/on-cloudmonster-2-m-1160x725-ALL.webp' },
+];
+
+// ──────────────────────────────────────────────────────────────────
+// State
+// ──────────────────────────────────────────────────────────────────
+let running = false;
+let failed  = [];
+const results = { ok: 0, err: 0, skip: 0 };
+
+function log(msg, cls = 'log-info') {
+  const el = document.getElementById('log');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + cls;
+  line.textContent = new Date().toLocaleTimeString('fr') + '  ' + msg;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function updateStats(total) {
+  document.getElementById('cntOk').textContent    = results.ok;
+  document.getElementById('cntErr').textContent   = results.err;
+  document.getElementById('cntSkip').textContent  = results.skip;
+  document.getElementById('cntTotal').textContent = total;
+  const done = results.ok + results.err + results.skip;
+  document.getElementById('progressFill').style.width = Math.round(done / total * 100) + '%';
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Fetch image — essai direct, puis via proxy allorigins.win si CORS
+// ──────────────────────────────────────────────────────────────────
+async function fetchImage(shoe) {
+  const PROXY = 'https://api.allorigins.win/raw?url=';
+
+  // 1. Essai direct
+  try {
+    const res = await fetch(shoe.url, { mode: 'cors' });
+    if (res.ok) {
+      const ct = res.headers.get('content-type') || 'image/jpeg';
+      if (ct.startsWith('image/')) {
+        return { blob: await res.blob(), ct, via: 'direct' };
+      }
+    }
+    if (res.status === 404) throw new Error('HTTP 404 — URL expirée');
+  } catch (e) {
+    if (e.message.includes('404')) throw e; // ne pas réessayer si 404 réel
+  }
+
+  // 2. Fallback via allorigins.win (contourne le CORS)
+  const proxyUrl = PROXY + encodeURIComponent(shoe.url);
+  const res2 = await fetch(proxyUrl);
+  if (!res2.ok) throw new Error(`Proxy ${res2.status} — ${shoe.url.split('/').pop()}`);
+  const ct2 = res2.headers.get('content-type') || 'image/jpeg';
+  const blob2 = await res2.blob();
+  // Vérifier que c'est bien une image (allorigins peut retourner du HTML en cas d'erreur)
+  if (blob2.size < 1000) throw new Error('Image trop petite — probablement une erreur');
+  return { blob: blob2, ct: ct2.startsWith('image/') ? ct2 : 'image/jpeg', via: 'proxy' };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Upload vers Supabase Storage
+// ──────────────────────────────────────────────────────────────────
+async function uploadToStorage(shoeId, blob, ct) {
+  const ext = ct.includes('webp') ? 'webp' : ct.includes('png') ? 'png' : 'jpg';
+  const filePath = `${shoeId}.${ext}`;
+
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${BUCKET}/${filePath}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+      'Content-Type': ct,
+      'x-upsert': 'true',
+      'Cache-Control': '31536000',
+    },
+    body: blob,
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Storage upload failed: ${res.status} ${err}`);
+  }
+  return { publicUrl: `${STORAGE_PUBLIC_BASE}/${filePath}`, storagePath: filePath };
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Mise à jour DB
+// ──────────────────────────────────────────────────────────────────
+async function updateDb(shoeId, publicUrl, storagePath) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/shoes?id=eq.${shoeId}`, {
+    method: 'PATCH',
+    headers: {
+      'Authorization': `Bearer ${SERVICE_ROLE_KEY}`,
+      'apikey': SERVICE_ROLE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=minimal',
+    },
+    body: JSON.stringify({
+      image_url: publicUrl,
+      image_storage_path: storagePath,
+    }),
+  });
+  if (!res.ok) throw new Error(`DB update failed: ${res.status}`);
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Vérifier si déjà uploadé
+// ──────────────────────────────────────────────────────────────────
+async function isAlreadyUploaded(shoeId) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/shoes?id=eq.${shoeId}&select=image_storage_path`, {
+    headers: { 'Authorization': `Bearer ${SERVICE_ROLE_KEY}`, 'apikey': SERVICE_ROLE_KEY }
+  });
+  const data = await res.json();
+  return !!data?.[0]?.image_storage_path;
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Traitement d'une chaussure
+// ──────────────────────────────────────────────────────────────────
+async function processShoe(shoe, forceRetry = false) {
+  if (!forceRetry) {
+    const already = await isAlreadyUploaded(shoe.id);
+    if (already) {
+      log(`⊘  ${shoe.id} — déjà dans Storage, ignoré`, 'log-skip');
+      results.skip++;
+      return;
+    }
+  }
+
+  try {
+    const { blob, ct } = await fetchImage(shoe);
+    const { publicUrl, storagePath } = await uploadToStorage(shoe.id, blob, ct);
+    await updateDb(shoe.id, publicUrl, storagePath);
+    log(`✅  ${shoe.id} — ${storagePath} (${(blob.size/1024).toFixed(0)} KB)`, 'log-ok');
+    results.ok++;
+  } catch (err) {
+    log(`❌  ${shoe.id} — ${err.message}`, 'log-err');
+    results.err++;
+    failed.push({ ...shoe, error: err.message });
+  }
+}
+
+// ──────────────────────────────────────────────────────────────────
+// Actions
+// ──────────────────────────────────────────────────────────────────
+async function start() {
+  if (running) return;
+  running = true;
+  failed = [];
+  results.ok = 0; results.err = 0; results.skip = 0;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled  = false;
+  document.getElementById('retryBtn').disabled = true;
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('summary').style.display = 'none';
+
+  log(`🏃 Démarrage — ${SHOES.length} chaussures à traiter`, 'log-info');
+
+  for (const shoe of SHOES) {
+    if (!running) { log('■ Arrêté par l\'utilisateur', 'log-info'); break; }
+    await processShoe(shoe);
+    updateStats(SHOES.length);
+    await new Promise(r => setTimeout(r, 200));
+  }
+
+  finish();
+}
+
+async function retryFailed() {
+  if (running || failed.length === 0) return;
+  running = true;
+  const toRetry = [...failed];
+  failed = [];
+  results.err = 0;
+  document.getElementById('startBtn').disabled = true;
+  document.getElementById('stopBtn').disabled  = false;
+  document.getElementById('retryBtn').disabled = true;
+
+  log(`↩  Retry de ${toRetry.length} chaussure(s) en échec`, 'log-info');
+
+  for (const shoe of toRetry) {
+    if (!running) break;
+    await processShoe(shoe, true);
+    updateStats(SHOES.length);
+    await new Promise(r => setTimeout(r, 400));
+  }
+
+  finish();
+}
+
+function stop() {
+  running = false;
+  document.getElementById('stopBtn').disabled = true;
+}
+
+function finish() {
+  running = false;
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled  = true;
+  document.getElementById('retryBtn').disabled = failed.length === 0;
+
+  log(`\n─────────────────────────────────────────`, 'log-info');
+  log(`✅ Succès : ${results.ok}`, 'log-ok');
+  log(`⊘  Ignorés : ${results.skip}`, 'log-skip');
+  log(`❌ Échecs  : ${results.err}`, 'log-err');
+
+  if (failed.length > 0) {
+    const summaryEl = document.getElementById('summary');
+    summaryEl.style.display = 'block';
+    document.getElementById('summaryContent').textContent =
+      failed.map(f => `${f.id}\n  URL: ${f.url}\n  Erreur: ${f.error}`).join('\n\n');
+  }
+}
+</script>
+
+</body>
+</html>
