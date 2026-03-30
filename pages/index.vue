@@ -21,6 +21,24 @@ const features = [
   { icon: Zap, title: 'Matchez', desc: 'Notre algorithme analyse votre profil pour trouver la chaussure idéale.' },
   { icon: Shield, title: 'Courez', desc: 'Recevez vos recommandations personnalisées et commandez en un clic.' },
 ]
+
+interface BlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  cover_url: string | null
+  published_at: string | null
+  tags: string[]
+}
+
+const { data: blogData } = await useFetch<{ posts: BlogPost[] }>('/api/blog')
+const blogPosts = computed(() => blogData.value?.posts?.slice(0, 3) ?? [])
+
+function formatDate(d: string | null) {
+  if (!d) return ''
+  return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+}
 </script>
 
 <template>
@@ -122,6 +140,61 @@ const features = [
               <p class="text-muted-foreground leading-relaxed">{{ feature.desc }}</p>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Blog section -->
+      <section id="blog" class="py-24 border-t border-border">
+        <div class="container">
+          <div
+            v-motion
+            :initial="{ opacity: 0, y: 30 }"
+            :visible-once="{ opacity: 1, y: 0, transition: { duration: 600 } }"
+            class="text-center mb-16"
+          >
+            <h2 class="text-3xl md:text-4xl font-black tracking-tight">Le blog RunMatch</h2>
+            <p class="text-muted-foreground mt-3 max-w-lg mx-auto">Conseils, comparatifs et guides pour bien choisir vos chaussures de running.</p>
+          </div>
+
+          <div v-if="blogPosts.length" class="grid md:grid-cols-3 gap-6">
+            <NuxtLink
+              v-for="(post, i) in blogPosts"
+              :key="post.id"
+              :to="`/blog/${post.slug}`"
+              v-motion
+              :initial="{ opacity: 0, y: 30 }"
+              :visible-once="{ opacity: 1, y: 0, transition: { duration: 600, delay: i * 120 } }"
+              class="group rounded-2xl bg-background card-shadow overflow-hidden hover:shadow-lg transition-shadow"
+            >
+              <div
+                class="h-44 bg-muted overflow-hidden"
+              >
+                <img
+                  v-if="post.cover_url"
+                  :src="post.cover_url"
+                  :alt="post.title"
+                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div v-else class="w-full h-full flex items-center justify-center text-4xl">✍️</div>
+              </div>
+              <div class="p-5 space-y-2">
+                <div class="flex flex-wrap gap-1.5 mb-1">
+                  <span
+                    v-for="tag in post.tags.slice(0, 2)"
+                    :key="tag"
+                    class="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 font-medium"
+                  >{{ tag }}</span>
+                </div>
+                <h3 class="font-bold text-base leading-snug group-hover:text-orange-400 transition-colors line-clamp-2">
+                  {{ post.title }}
+                </h3>
+                <p class="text-sm text-muted-foreground line-clamp-2">{{ post.excerpt }}</p>
+                <p class="text-xs text-muted-foreground pt-1">{{ formatDate(post.published_at) }}</p>
+              </div>
+            </NuxtLink>
+          </div>
+
+          <p v-else class="text-center text-muted-foreground text-sm">Aucun article pour l'instant.</p>
         </div>
       </section>
 

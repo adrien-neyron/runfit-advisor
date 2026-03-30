@@ -31,7 +31,7 @@
       </div>
 
       <!-- Raccourcis -->
-      <div class="grid md:grid-cols-3 gap-4">
+      <div class="grid md:grid-cols-4 gap-4">
         <NuxtLink
           to="/admin/shoes"
           class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-orange-500/50 transition-colors group"
@@ -48,6 +48,15 @@
           <div class="text-2xl mb-2">📋</div>
           <h3 class="font-semibold group-hover:text-orange-400 transition-colors">Drafts</h3>
           <p class="text-sm text-gray-400 mt-1">{{ stats.drafts }} chaussures en attente de validation</p>
+        </NuxtLink>
+
+        <NuxtLink
+          to="/admin/blog"
+          class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-orange-500/50 transition-colors group"
+        >
+          <div class="text-2xl mb-2">✍️</div>
+          <h3 class="font-semibold group-hover:text-orange-400 transition-colors">Blog</h3>
+          <p class="text-sm text-gray-400 mt-1">Écrire et publier des articles</p>
         </NuxtLink>
 
         <label
