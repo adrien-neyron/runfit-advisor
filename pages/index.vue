@@ -93,13 +93,12 @@ function formatDate(d: string | null) {
           class="space-y-6 max-w-xl"
         >
           <h1 class="text-5xl md:text-7xl font-black tracking-tight leading-[0.95] text-white drop-shadow-lg">
-            Votre prochaine<br />
-            chaussure de running,<br />
-            <span class="text-gradient">validée par votre corps.</span>
+            Arrête de te tromper<br />
+            <span class="text-gradient">de chaussures de running.</span>
           </h1>
           <p class="text-lg text-white/70 max-w-md leading-relaxed drop-shadow">
-            1 minute de questions. 30 secondes de swipe.<br />
-            Une recommandation ultra personnalisée.
+            Analyse ton profil + swipe de modèles adaptés →<br />
+            Trouve ta paire idéale en 2 minutes.
           </p>
           <div class="flex flex-wrap gap-4 pt-2">
             <UiButton variant="hero" size="xl" @click="handleCTA">
