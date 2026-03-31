@@ -17,8 +17,10 @@ export default defineNuxtConfig({
 
   // Variables serveur accessibles dans les routes API
   runtimeConfig: {
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
-    adminEmails: process.env.ADMIN_EMAILS ?? '',
+    supabaseServiceKey:   process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
+    adminEmails:          process.env.ADMIN_EMAILS ?? '',
+    amazonPaAccessKey:    process.env.AMAZON_PA_ACCESS_KEY ?? '',
+    amazonPaSecretKey:    process.env.AMAZON_PA_SECRET_KEY ?? '',
   },
 
   modules: [
