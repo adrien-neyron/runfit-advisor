@@ -116,7 +116,6 @@ function renderMarkdown(md: string): string {
       </NuxtLink>
     </div>
 
-    <AppFooter />
   </div>
 </template>
 

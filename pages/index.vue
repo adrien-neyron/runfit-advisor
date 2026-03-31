@@ -198,7 +198,6 @@ function formatDate(d: string | null) {
         </div>
       </section>
 
-      <AppFooter />
     </div>
   </div>
 </template>

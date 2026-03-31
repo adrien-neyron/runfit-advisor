@@ -153,6 +153,5 @@ async function submit() {
       </form>
     </div>
 
-    <AppFooter />
   </div>
 </template>

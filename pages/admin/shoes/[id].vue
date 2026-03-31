@@ -217,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ middleware: 'admin' })
+definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 const route    = useRoute()
 const supabase = useSupabaseClient()

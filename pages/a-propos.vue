@@ -129,6 +129,5 @@ const values = [
       </section>
     </div>
 
-    <AppFooter />
   </div>
 </template>

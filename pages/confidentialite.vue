@@ -65,6 +65,5 @@ useHead({
       </p>
     </div>
 
-    <AppFooter />
   </div>
 </template>
