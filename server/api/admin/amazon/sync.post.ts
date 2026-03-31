@@ -10,7 +10,7 @@
  */
 
 import { lookupAmazonAsin } from '~/server/services/amazonPaApi.service'
-import { requireAdmin } from '~/server/middleware/admin'
+import { requireAdmin } from '../../../utils/requireAdmin'
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)

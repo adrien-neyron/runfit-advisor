@@ -9,6 +9,9 @@ export default defineNuxtConfig({
     externals: {
       external: ['sharp', 'fast-xml-parser'],
     },
+    experimental: {
+      tasks: true,
+    },
     // Tâche planifiée : sync des flux marchands tous les jours à 03:00
     scheduledTasks: {
       '0 3 * * *': ['syncFeeds'],
