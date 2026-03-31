@@ -44,3 +44,4 @@ Thumbs.db
 # Legacy (ancienne stack Vite/React)
 bun.lock
 bun.lockb
+.vercel

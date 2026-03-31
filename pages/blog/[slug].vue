@@ -69,11 +69,11 @@ function renderMarkdown(md: string): string {
 
     <article class="container max-w-2xl py-16">
       <!-- Image de couverture -->
-      <img
+      <BlogCoverImage
         v-if="post?.cover_url"
         :src="post.cover_url"
         :alt="post.title"
-        class="w-full h-64 object-cover rounded-2xl mb-10"
+        class="w-full h-64 rounded-2xl mb-10"
       />
 
       <!-- Tags -->

@@ -169,11 +169,11 @@ function formatDate(d: string | null) {
               <div
                 class="h-44 bg-muted overflow-hidden"
               >
-                <img
+                <BlogCoverImage
                   v-if="post.cover_url"
                   :src="post.cover_url"
                   :alt="post.title"
-                  class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  class="w-full h-full"
                 />
                 <div v-else class="w-full h-full flex items-center justify-center text-4xl">✍️</div>
               </div>
