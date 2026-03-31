@@ -223,13 +223,11 @@ const specs = computed(() => {
               <p class="text-xs text-muted-foreground font-medium uppercase tracking-widest">{{ shoe.brand }}</p>
               <h1 class="text-3xl font-black tracking-tight leading-tight mt-0.5">{{ shoe.model }}</h1>
             </div>
-            <div class="text-right shrink-0">
+            <div v-if="bestPrice !== null" class="text-right shrink-0">
               <p class="text-3xl font-black text-primary">
-                {{ bestPrice !== null ? bestPrice.toFixed(2) : shoe.prix }} €
+                {{ bestPrice.toFixed(2) }} €
               </p>
-              <p class="text-[11px] text-muted-foreground">
-                {{ bestPrice !== null ? 'meilleur prix' : 'prix indicatif' }}
-              </p>
+              <p class="text-[11px] text-muted-foreground">meilleur prix</p>
             </div>
           </div>
 

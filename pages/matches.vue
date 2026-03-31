@@ -131,7 +131,7 @@ const matchedShoes = computed(() =>
             :enter="{ opacity: 1, y: 0, transition: { delay: i * 60, duration: 350 } }"
             class="bg-card rounded-2xl border border-border overflow-hidden cursor-pointer group hover:shadow-xl hover:border-primary/30 transition-all duration-200"
             role="link"
-            :aria-label="`${shoe!.brand} ${shoe!.model} — ${shoe!.prix} €`"
+            :aria-label="`${shoe!.brand} ${shoe!.model}`"
             @click="router.push(`/shoes/${shoe!.slug}`)"
           >
             <div class="aspect-square bg-gradient-to-br from-secondary/80 to-secondary/30 overflow-hidden relative">
@@ -147,7 +147,9 @@ const matchedShoes = computed(() =>
                 {{ shoe!.brand }}
               </p>
               <h3 class="text-sm font-black leading-tight line-clamp-2 mt-0.5">{{ shoe!.model }}</h3>
-              <p class="text-primary font-bold text-sm mt-1.5">{{ shoe!.prix }} €</p>
+              <p class="text-xs text-muted-foreground mt-1.5 flex items-center gap-1">
+                Voir les prix →
+              </p>
               <div class="flex gap-1 mt-2 flex-wrap">
                 <span
                   v-for="tag in shoe!.tags.slice(0, 2)"

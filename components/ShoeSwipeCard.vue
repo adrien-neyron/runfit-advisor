@@ -142,9 +142,6 @@ function onPointerUp() {
         <span class="absolute top-3 left-3 bg-background/80 backdrop-blur-sm text-foreground text-xs font-bold px-2.5 py-1 rounded-full">
           {{ shoe.brand }}
         </span>
-        <span class="absolute top-3 right-3 bg-primary text-primary-foreground text-sm font-black px-3 py-1 rounded-full">
-          {{ shoe.prix }} €
-        </span>
       </div>
 
       <!-- Infos -->

@@ -247,29 +247,16 @@ const scorePercent = (score: number) => Math.min(100, Math.round((score / 90) * 
                   </div>
                 </div>
 
-                <!-- Prix + Actions -->
-                <div class="mt-auto flex items-center justify-between">
-                  <div>
-                    <span class="text-2xl font-black">{{ rec.product.prix }} €</span>
-                    <span
-                      v-if="bestOffers[rec.product.id] && bestOffers[rec.product.id].price < rec.product.prix"
-                      class="ml-2 text-sm font-semibold text-primary"
-                    >
-                      dès {{ bestOffers[rec.product.id].price.toFixed(2) }} €
-                    </span>
-                  </div>
-                  <div class="flex gap-3">
-                    <UiButton variant="outline" @click="router.push(`/shoes/${rec.product.id}`)">
-                      Détails
-                    </UiButton>
-                    <UiButton
-                      variant="hero"
-                      @click="handleBuy(rec.product.id, `${rec.product.brand} ${rec.product.model}`)"
-                    >
-                      <ShoppingBag class="w-4 h-4" />
-                      {{ user ? "Voir l'offre" : 'Se connecter' }}
-                    </UiButton>
-                  </div>
+                <!-- Actions -->
+                <div class="mt-auto flex gap-3">
+                  <UiButton
+                    variant="hero"
+                    class="flex-1 gap-2"
+                    @click="router.push(`/shoes/${rec.product.id}`)"
+                  >
+                    <ShoppingBag class="w-4 h-4" />
+                    Voir les prix
+                  </UiButton>
                 </div>
               </div>
             </div>
