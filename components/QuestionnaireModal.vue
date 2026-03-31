@@ -349,9 +349,9 @@ const continueFromTeaser = () => {
                   </div>
                   <div>
                     <p class="text-2xl font-black tracking-tight leading-tight">
-                      3 chaussures parfaites<br />trouvées pour toi ✓
+                      Ta sélection personnalisée<br />est prête ✓
                     </p>
-                    <p class="text-sm text-muted-foreground mt-2">Préparation du swipe…</p>
+                    <p class="text-sm text-muted-foreground mt-2">Lance le swipe pour découvrir tes paires →</p>
                   </div>
                 </div>
               </Transition>
