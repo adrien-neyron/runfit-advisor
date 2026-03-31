@@ -63,7 +63,7 @@ function buildFallbackUrl(retailerName: string, productId: string): string {
   if (n.includes("jd sports") || n.includes("jdsports")) return `https://www.jdsports.fr/search/jd/${q}/`;
 
   // Amazon (affiliation)
-  if (n.includes("amazon")) return `https://www.amazon.fr/s?k=${q}+chaussure+running&i=sporting&tag=runfit-21`;
+  if (n.includes("amazon")) return `https://www.amazon.fr/s?k=${q}+chaussure+running&i=sporting&tag=runmatch-21`;
 
   // Marques en direct
   if (n.includes("nike")) return `https://www.nike.com/fr/search?q=${q}`;

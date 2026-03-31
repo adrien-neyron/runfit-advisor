@@ -199,19 +199,24 @@ const scorePercent = (score: number) => Math.min(100, Math.round((score / 90) * 
                     <h3 class="text-2xl font-black tracking-tight">{{ rec.product.model }}</h3>
                   </div>
                   <!-- Score ring -->
-                  <div class="shrink-0 relative w-12 h-12">
-                    <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
-                      <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--secondary))" stroke-width="2.8" />
-                      <circle
-                        cx="18" cy="18" r="15.9" fill="none"
-                        stroke="hsl(var(--primary))" stroke-width="2.8"
-                        stroke-dasharray="100" :stroke-dashoffset="100 - scorePercent(rec.score)"
-                        stroke-linecap="round"
-                        style="transition: stroke-dashoffset 0.5s ease"
-                      />
-                    </svg>
-                    <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black">
-                      {{ scorePercent(rec.score) }}%
+                  <div class="shrink-0 flex flex-col items-center gap-1">
+                    <div class="relative w-12 h-12">
+                      <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                        <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--secondary))" stroke-width="2.8" />
+                        <circle
+                          cx="18" cy="18" r="15.9" fill="none"
+                          stroke="hsl(var(--primary))" stroke-width="2.8"
+                          stroke-dasharray="100" :stroke-dashoffset="100 - scorePercent(rec.score)"
+                          stroke-linecap="round"
+                          style="transition: stroke-dashoffset 0.5s ease"
+                        />
+                      </svg>
+                      <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black">
+                        {{ scorePercent(rec.score) }}%
+                      </span>
+                    </div>
+                    <span class="text-[9px] font-medium text-muted-foreground uppercase tracking-wide leading-none">
+                      Compatibilité
                     </span>
                   </div>
                 </div>

@@ -1,15 +1,25 @@
 <script setup lang="ts">
 import { ArrowLeft, Heart, HeartOff, ExternalLink, ShoppingCart, Loader2 } from 'lucide-vue-next'
 import { buildTags } from '~/data/shoes'
+import { getRecommendations } from '~/data/products'
 import type { MerchantOffer } from '~/composables/useMerchants'
 
 const route = useRoute()
 const router = useRouter()
 const slug = computed(() => route.params.slug as string)
 
-const matchesStore = useMatchesStore()
-const shoesStore   = useShoesStore()
+const matchesStore   = useMatchesStore()
+const shoesStore     = useShoesStore()
+const profileStore   = useUserProfileStore()
 const { fetchMerchantOffers, trackOfferClick } = useMerchants()
+
+const scorePercent = (score: number) => Math.min(100, Math.round((score / 90) * 100))
+
+const compatScore = computed<number | null>(() => {
+  if (!profileStore.profile || !shoe.value) return null
+  const results = getRecommendations(profileStore.profile, 1, [shoe.value] as any)
+  return results[0]?.score ?? null
+})
 
 type LinkStatus = 'checking' | 'ok' | 'unavailable' | 'unknown' | 'search'
 
@@ -232,6 +242,35 @@ const specs = computed(() => {
             >
               {{ tag }}
             </span>
+          </div>
+
+          <!-- Compatibilité profil -->
+          <div
+            v-if="compatScore !== null"
+            class="flex items-center gap-4 mt-4 px-4 py-3 rounded-2xl bg-primary/10 border border-primary/20"
+          >
+            <div class="relative w-12 h-12 shrink-0">
+              <svg class="w-full h-full -rotate-90" viewBox="0 0 36 36">
+                <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--secondary))" stroke-width="2.8" />
+                <circle
+                  cx="18" cy="18" r="15.9" fill="none"
+                  stroke="hsl(var(--primary))" stroke-width="2.8"
+                  stroke-dasharray="100"
+                  :stroke-dashoffset="100 - scorePercent(compatScore)"
+                  stroke-linecap="round"
+                  style="transition: stroke-dashoffset 0.6s ease"
+                />
+              </svg>
+              <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black">
+                {{ scorePercent(compatScore) }}%
+              </span>
+            </div>
+            <div>
+              <p class="text-sm font-black leading-tight">
+                {{ scorePercent(compatScore) }}% de compatibilité avec ton profil
+              </p>
+              <p class="text-xs text-muted-foreground mt-0.5">Basé sur ta foulée, ton terrain et tes objectifs</p>
+            </div>
           </div>
         </header>
 

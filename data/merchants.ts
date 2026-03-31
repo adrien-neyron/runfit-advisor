@@ -24,7 +24,7 @@ export interface MerchantLink {
 }
 
 // Tag Amazon Associates France
-const AMAZON_AFFILIATE_TAG = 'runfit-21'
+const AMAZON_AFFILIATE_TAG = 'runmatch-21'
 
 /**
  * Génère dynamiquement des liens de recherche pour les 5 retailers principaux.

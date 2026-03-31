@@ -67,7 +67,7 @@ useHead({
         RunMatch est partenaire des programmes suivants :
       </p>
       <ul>
-        <li>Amazon Partenaires (amazon.fr) — tag : <code>runfit-21</code></li>
+        <li>Amazon Partenaires (amazon.fr) — tag : <code>runmatch-21</code></li>
         <li>Réseau AWIN (i-Run, The Running Collective, Courir, Intersport)</li>
       </ul>
 
