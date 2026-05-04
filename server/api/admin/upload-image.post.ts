@@ -131,11 +131,18 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 500, statusMessage: imgError.message })
   }
 
-  // Si image primaire → mettre à jour shoes.image_url
+  // Si image primaire → mettre à jour les colonnes image sur shoes
   if (isPrimary) {
     await supabase
       .from('shoes')
-      .update({ image_url: urls.card })
+      .update({
+        image_url:          urls.card,          // legacy compat
+        image_url_cdn:      urls.card,          // nouveau — source de vérité CDN
+        image_storage_path: paths.card,         // legacy compat
+        last_image_check:   new Date().toISOString(),
+        // image_source_url non défini ici (upload manuel = pas d'URL source distante)
+        updated_at:         new Date().toISOString(),
+      })
       .eq('id', shoeId)
   }
 

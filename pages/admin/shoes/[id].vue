@@ -10,35 +10,19 @@
     </nav>
 
     <!-- Loading -->
-    <div v-if="loading" class="max-w-5xl mx-auto px-6 py-8">
-      <div class="grid lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-4">
-          <div v-for="i in 3" :key="i" class="bg-gray-900 rounded-xl h-32 animate-pulse" />
-        </div>
-        <div class="bg-gray-900 rounded-xl h-64 animate-pulse" />
-      </div>
+    <div v-if="loading" class="max-w-5xl mx-auto px-6 py-8 space-y-4">
+      <div v-for="i in 4" :key="i" class="bg-gray-900 rounded-xl h-32 animate-pulse" />
     </div>
 
     <div v-else-if="shoe" class="max-w-5xl mx-auto px-6 py-8">
+
       <!-- En-tête -->
       <div class="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div>
           <h1 class="text-2xl font-bold">{{ shoe.brand }} {{ shoe.model }}</h1>
-          <p class="text-gray-400 text-sm mt-1">ID : {{ shoe.id }}</p>
         </div>
         <div class="flex items-center gap-3">
-          <span
-            :class="[
-              'px-3 py-1 rounded-full text-sm font-medium',
-              shoe.is_draft
-                ? 'bg-orange-500/10 text-orange-400'
-                : shoe.is_active
-                ? 'bg-green-500/10 text-green-400'
-                : 'bg-gray-700 text-gray-400',
-            ]"
-          >
-            {{ shoe.is_draft ? 'Draft' : shoe.is_active ? 'Actif' : 'Inactif' }}
-          </span>
+          <span :class="statusClass">{{ statusLabel }}</span>
           <button
             v-if="shoe.is_draft"
             @click="validateShoe"
@@ -51,34 +35,124 @@
       </div>
 
       <div class="grid lg:grid-cols-3 gap-6">
-        <!-- Colonne principale -->
-        <div class="lg:col-span-2 space-y-4">
 
-          <!-- Informations générales -->
-          <Section title="Informations">
+        <!-- Colonne principale -->
+        <div class="lg:col-span-2 space-y-5">
+
+          <!-- Identité -->
+          <Section title="Identité">
             <div class="grid grid-cols-2 gap-3">
-              <InfoRow label="Marque" :value="shoe.brand" />
-              <InfoRow label="Modèle" :value="shoe.model" />
-              <InfoRow label="Catégorie" :value="shoe.category || '—'" />
-              <InfoRow label="Genre" :value="shoe.gender || '—'" />
-              <InfoRow label="Année" :value="shoe.release_year?.toString() || '—'" />
-              <InfoRow label="Prix" :value="`${shoe.prix} €`" />
+              <Field label="Marque">
+                <input v-model="form.brand" type="text" class="form-input" />
+              </Field>
+              <Field label="Modèle">
+                <input v-model="form.model" type="text" class="form-input" />
+              </Field>
+            </div>
+          </Section>
+
+          <!-- Classification -->
+          <Section title="Classification">
+            <div class="grid grid-cols-2 gap-3">
+              <Field label="Catégorie">
+                <select v-model="form.category" class="form-input">
+                  <option value="">— Non défini —</option>
+                  <option value="road">Route</option>
+                  <option value="trail">Trail</option>
+                  <option value="daily">Quotidien / Mixte</option>
+                  <option value="race">Compétition</option>
+                </select>
+              </Field>
+              <Field label="Genre">
+                <select v-model="form.gender" class="form-input">
+                  <option value="unisex">Unisexe</option>
+                  <option value="men">Homme</option>
+                  <option value="women">Femme</option>
+                </select>
+              </Field>
+              <Field label="Année de sortie">
+                <input v-model.number="form.release_year" type="number" min="2020" max="2030" class="form-input" />
+              </Field>
+              <Field label="Prix catalogue (€)">
+                <input v-model.number="form.prix" type="number" step="0.01" min="0" class="form-input" />
+              </Field>
             </div>
           </Section>
 
           <!-- Specs techniques -->
           <Section title="Spécifications techniques">
             <div class="grid grid-cols-3 gap-3">
-              <InfoRow label="Drop" :value="`${shoe.drop_mm} mm`" />
-              <InfoRow label="Poids" :value="`${shoe.poids_g} g`" />
-              <InfoRow label="Pronation" :value="shoe.pronation || '—'" />
-              <InfoRow label="Terrain" :value="shoe.terrain_type || '—'" />
-              <InfoRow label="Amorti" :value="shoe.amorti" />
-              <InfoRow label="Stabilité" :value="shoe.stabilite" />
+              <Field label="Drop (mm)">
+                <input v-model.number="form.drop_mm" type="number" min="0" max="20" class="form-input" />
+              </Field>
+              <Field label="Poids (g)">
+                <input v-model.number="form.poids_g" type="number" min="100" max="600" class="form-input" />
+              </Field>
+              <Field label="Pronation">
+                <select v-model="form.pronation" class="form-input">
+                  <option value="">— Non défini —</option>
+                  <option value="neutral">Neutre</option>
+                  <option value="stability">Stabilité (pronateur)</option>
+                  <option value="motion_control">Contrôle de mouvement</option>
+                </select>
+              </Field>
+              <Field label="Amorti">
+                <select v-model="form.amorti" class="form-input">
+                  <option value="faible">Faible</option>
+                  <option value="moyen">Moyen</option>
+                  <option value="élevé">Élevé</option>
+                  <option value="maximal">Maximal</option>
+                </select>
+              </Field>
+              <Field label="Stabilité">
+                <select v-model="form.stabilite" class="form-input">
+                  <option value="faible">Faible</option>
+                  <option value="moyenne">Moyenne</option>
+                  <option value="élevée">Élevée</option>
+                </select>
+              </Field>
+              <Field label="Dynamisme">
+                <select v-model="form.dynamisme" class="form-input">
+                  <option value="faible">Faible</option>
+                  <option value="moyen">Moyen</option>
+                  <option value="élevé">Élevé</option>
+                </select>
+              </Field>
             </div>
           </Section>
 
-          <!-- Liens affiliés -->
+          <!-- Profil -->
+          <Section title="Profil coureur">
+            <div class="grid grid-cols-2 gap-4">
+              <Field label="Foulée">
+                <CheckGroup v-model="form.foulee" :options="['neutre','pronateur','supinateur']" />
+              </Field>
+              <Field label="Terrain">
+                <CheckGroup v-model="form.terrain" :options="['route','trail','mixte']" />
+              </Field>
+              <Field label="Niveau">
+                <CheckGroup v-model="form.niveau" :options="['débutant','intermédiaire','avancé']" />
+              </Field>
+              <Field label="Largeur disponible">
+                <CheckGroup v-model="form.largeur_disponible" :options="['standard','large','étroit']" />
+              </Field>
+              <Field label="Objectif" class-name="col-span-2">
+                <CheckGroup v-model="form.objectif" :options="['confort','performance','prévention','compétition','trail']" />
+              </Field>
+            </div>
+          </Section>
+
+          <!-- Description -->
+          <Section title="Description">
+            <Field label="Description courte">
+              <textarea v-model="form.description" rows="3" class="form-input resize-none" />
+            </Field>
+            <Field label="Bénéfices clés (1 par ligne)" class="mt-3">
+              <textarea v-model="benefitsRaw" rows="4" class="form-input resize-none font-mono text-xs" />
+            </Field>
+          </Section>
+
+          <!-- Liens affiliés (lecture seule) -->
           <Section title="Liens affiliés">
             <div v-if="affiliateLinks.length > 0" class="space-y-2">
               <div
@@ -104,42 +178,54 @@
             </div>
             <p v-else class="text-sm text-gray-500">Aucun lien affilié.</p>
           </Section>
+
+          <!-- Bouton sauvegarder -->
+          <div class="flex justify-end pt-2">
+            <button
+              @click="saveShoe"
+              :disabled="saving"
+              class="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold text-sm rounded-lg transition-colors"
+            >
+              {{ saving ? 'Sauvegarde...' : 'Sauvegarder les modifications' }}
+            </button>
+          </div>
+
+          <!-- Zone danger -->
+          <Section title="Zone danger">
+            <div class="flex items-center justify-between">
+              <div>
+                <p class="text-sm font-medium text-red-400">Désactiver la chaussure</p>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  La chaussure ne sera plus visible dans l'app mais reste en base.
+                </p>
+              </div>
+              <button
+                @click="confirmDeactivate"
+                :disabled="deactivating"
+                class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-sm font-medium rounded-lg transition-colors"
+              >
+                {{ deactivating ? '...' : shoe.is_active ? 'Désactiver' : 'Déjà inactif' }}
+              </button>
+            </div>
+          </Section>
+
         </div>
 
         <!-- Colonne images -->
         <div class="space-y-4">
-          <!-- Image principale -->
-          <Section title="Images">
-            <!-- Preview image actuelle -->
+          <Section title="Image">
+
+            <!-- Preview -->
             <div class="mb-4">
               <img
-                v-if="shoe.image_url"
-                :src="shoe.image_url"
+                :src="displayImageUrl || '/shoe-placeholder.webp'"
                 :alt="shoe.model"
-                class="w-full aspect-square object-cover rounded-xl bg-gray-800"
-              />
-              <div
-                v-else
-                class="w-full aspect-square rounded-xl bg-gray-800 flex flex-col items-center justify-center text-gray-600 gap-2"
-              >
-                <span class="text-4xl">📷</span>
-                <span class="text-sm">Aucune image</span>
-              </div>
-            </div>
-
-            <!-- Toutes les images -->
-            <div v-if="shoeImages.length > 1" class="grid grid-cols-3 gap-2 mb-4">
-              <img
-                v-for="img in shoeImages"
-                :key="img.id"
-                :src="img.url_optimized || img.url_original"
-                class="w-full aspect-square object-cover rounded-lg bg-gray-800 cursor-pointer ring-1 ring-gray-700 hover:ring-orange-500 transition-all"
-                :class="{ 'ring-orange-500': img.is_primary }"
-                loading="lazy"
+                class="w-full aspect-square object-contain rounded-xl bg-gray-800 p-4"
+                @error="onImgError"
               />
             </div>
 
-            <!-- Upload image -->
+            <!-- Upload fichier -->
             <div
               class="border-2 border-dashed border-gray-700 rounded-xl p-4 text-center hover:border-orange-500/50 transition-colors cursor-pointer"
               @click="triggerUpload"
@@ -163,45 +249,52 @@
               @change="handleFileSelect"
             />
 
-            <!-- URL source — éditable -->
-            <div class="mt-3">
-              <p class="text-xs text-gray-500 mb-1">URL source originale :</p>
-              <div class="flex gap-2 items-start">
-                <input
-                  v-model="sourceUrlInput"
-                  type="url"
-                  placeholder="https://cdn.exemple.com/image.jpg"
-                  class="flex-1 min-w-0 bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-orange-500 transition-colors"
-                />
-                <button
-                  @click="saveSourceUrl"
-                  :disabled="savingUrl"
-                  class="flex-shrink-0 px-3 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-medium rounded-lg transition-colors"
-                >
-                  {{ savingUrl ? '...' : 'Sauver' }}
-                </button>
-              </div>
-              <a
-                v-if="shoe.image_original_url"
-                :href="shoe.image_original_url"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="mt-1 inline-block text-xs text-blue-400 hover:underline break-all"
+            <!-- Importer depuis URL -->
+            <div class="mt-3 space-y-2">
+              <p class="text-xs text-gray-500">URL de l'image :</p>
+              <input
+                v-model="sourceUrlInput"
+                type="url"
+                placeholder="https://cdn.nike.com/image.jpg"
+                class="w-full bg-gray-800 border border-gray-700 text-white text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-orange-500 transition-colors"
+              />
+
+              <!-- Détecteur de blocage CDN (invisible) -->
+              <img
+                v-if="sourceUrlInput"
+                :src="sourceUrlInput"
+                class="hidden"
+                @load="urlPreviewOk = true"
+                @error="urlPreviewOk = false"
+              />
+              <!-- Badge statut -->
+              <p v-if="urlPreviewOk === false" class="text-xs text-red-400">
+                🚫 Image bloquée par le CDN — utilise "Stocker dans Storage"
+              </p>
+
+              <!-- Stocker dans Supabase Storage (recommandé, contourne hotlink) -->
+              <button
+                @click="fetchImageFromUrl"
+                :disabled="fetchingImage || !sourceUrlInput"
+                class="w-full px-3 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
               >
-                Voir l'image source ↗
-              </a>
+                {{ fetchingImage ? '⏳ Téléchargement...' : '☁️ Stocker dans Supabase Storage' }}
+              </button>
+              <!-- Utiliser l'URL directement (seulement si l'aperçu est vert) -->
+              <button
+                @click="saveSourceUrl"
+                :disabled="savingUrl || !sourceUrlInput || urlPreviewOk === false"
+                class="w-full px-3 py-2 bg-gray-700 hover:bg-gray-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
+              >
+                {{ savingUrl ? '...' : '🔗 Utiliser l\'URL directement' }}
+              </button>
+              <p class="text-xs text-gray-600">
+                Si l'aperçu est bloqué (🚫), utilise Storage — le serveur télécharge l'image sans restriction.
+              </p>
             </div>
+
           </Section>
         </div>
-      </div>
-
-      <!-- Toast -->
-      <div
-        v-if="toast"
-        class="fixed bottom-6 right-6 px-4 py-3 rounded-xl text-sm font-medium shadow-lg transition-all"
-        :class="toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'"
-      >
-        {{ toast.message }}
       </div>
     </div>
 
@@ -213,6 +306,15 @@
         ← Retour au catalogue
       </NuxtLink>
     </div>
+
+    <!-- Toast -->
+    <div
+      v-if="toast"
+      class="fixed bottom-6 right-6 px-4 py-3 rounded-xl text-sm font-medium shadow-lg"
+      :class="toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'"
+    >
+      {{ toast.message }}
+    </div>
   </div>
 </template>
 
@@ -220,36 +322,40 @@
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 const route    = useRoute()
+const router   = useRouter()
 const supabase = useSupabaseClient()
 const shoeId   = route.params.id as string
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type Shoe = {
   id: string
   brand: string
   model: string
+  slug: string | null
   category: string | null
-  drop_mm: number
-  poids_g: number
-  weight_g: number | null
-  amorti: string
-  stabilite: string
-  pronation: string | null
-  terrain_type: string | null
-  gender: string
+  gender: string | null
   release_year: number | null
   prix: number
+  drop_mm: number
+  poids_g: number
+  amorti: string
+  stabilite: string
+  dynamisme: string
+  pronation: string | null
+  foulee: string[]
+  terrain: string[]
+  niveau: string[]
+  objectif: string[]
+  largeur_disponible: string[]
+  description: string
+  benefits: string[]
   image_url: string | null
+  image_url_cdn: string | null
+  image_source_url: string | null
   image_original_url: string | null
   is_active: boolean
   is_draft: boolean
-}
-
-type ShoeImage = {
-  id: string
-  url_original: string
-  url_optimized: string | null
-  is_primary: boolean
-  angle: string | null
 }
 
 type AffiliateLink = {
@@ -260,17 +366,118 @@ type AffiliateLink = {
   is_active: boolean
 }
 
+// ─── State ────────────────────────────────────────────────────────────────────
+
 const shoe           = ref<Shoe | null>(null)
-const shoeImages     = ref<ShoeImage[]>([])
 const affiliateLinks = ref<AffiliateLink[]>([])
 const loading        = ref(true)
 const validating     = ref(false)
+const saving         = ref(false)
+const deactivating   = ref(false)
 const uploading      = ref(false)
+const fetchingImage  = ref(false)
 const savingUrl      = ref(false)
 const dragOver       = ref(false)
 const imageInput     = ref<HTMLInputElement>()
-const toast          = ref<{ type: 'success' | 'error'; message: string } | null>(null)
 const sourceUrlInput = ref('')
+const urlPreviewOk   = ref<boolean | null>(null)
+const imageCacheBust = ref('')
+const toast          = ref<{ type: 'success' | 'error'; message: string } | null>(null)
+
+watch(sourceUrlInput, () => { urlPreviewOk.value = null })
+
+// Formulaire d'édition
+const form = reactive({
+  brand:             '',
+  model:             '',
+  slug:              '',
+  category:          '' as string | null,
+  gender:            'unisexe' as string | null,
+  release_year:      null as number | null,
+  prix:              0,
+  drop_mm:           0,
+  poids_g:           0,
+  amorti:            'moyen',
+  stabilite:         'moyenne',
+  dynamisme:         'moyen',
+  pronation:         '' as string | null,
+  foulee:            [] as string[],
+  terrain:           [] as string[],
+  niveau:            [] as string[],
+  objectif:          [] as string[],
+  largeur_disponible: [] as string[],
+  description:       '',
+})
+const benefitsRaw = ref('')
+
+// ─── Computed ─────────────────────────────────────────────────────────────────
+
+const displayImageUrl = computed(() => {
+  const url = shoe.value?.image_url || null
+  if (!url) return null
+  return imageCacheBust.value ? `${url}?t=${imageCacheBust.value}` : url
+})
+
+const statusLabel = computed(() =>
+  shoe.value?.is_draft ? 'Draft' : shoe.value?.is_active ? 'Actif' : 'Inactif'
+)
+const statusClass = computed(() => [
+  'px-3 py-1 rounded-full text-sm font-medium',
+  shoe.value?.is_draft
+    ? 'bg-orange-500/10 text-orange-400'
+    : shoe.value?.is_active
+    ? 'bg-green-500/10 text-green-400'
+    : 'bg-gray-700 text-gray-400',
+])
+
+// ─── Composables locaux ───────────────────────────────────────────────────────
+
+const Section = defineComponent({
+  props: { title: String },
+  setup(props, { slots }) {
+    return () => h('div', { class: 'bg-gray-900 rounded-xl border border-gray-800 p-5' }, [
+      h('h2', { class: 'text-sm font-semibold text-gray-300 mb-4' }, props.title),
+      slots.default?.(),
+    ])
+  },
+})
+
+const Field = defineComponent({
+  props: { label: String },
+  setup(props, { slots }) {
+    return () => h('div', {}, [
+      h('label', { class: 'block text-xs text-gray-500 mb-1' }, props.label),
+      slots.default?.(),
+    ])
+  },
+})
+
+const CheckGroup = defineComponent({
+  props: { modelValue: Array, options: Array },
+  emits: ['update:modelValue'],
+  setup(props, { emit }) {
+    const toggle = (val: string) => {
+      const current = (props.modelValue as string[]) || []
+      emit('update:modelValue', current.includes(val) ? current.filter((v) => v !== val) : [...current, val])
+    }
+    return () => h('div', { class: 'flex flex-wrap gap-2' },
+      (props.options as string[]).map((opt) =>
+        h('button', {
+          type: 'button',
+          onClick: () => toggle(opt),
+          class: [
+            'px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors capitalize',
+            ((props.modelValue as string[]) || []).includes(opt)
+              ? 'bg-orange-500 border-orange-500 text-white'
+              : 'bg-gray-800 border-gray-700 text-gray-300 hover:border-gray-500',
+          ].join(' '),
+        }, opt)
+      )
+    )
+  },
+})
+
+// ─── Chargement ───────────────────────────────────────────────────────────────
 
 onMounted(async () => {
   await loadShoe()
@@ -281,11 +488,11 @@ async function loadShoe() {
   const { data } = await supabase
     .from('shoes')
     .select(`
-      id, brand, model, category, drop_mm, poids_g, weight_g,
-      amorti, stabilite, pronation, terrain_type, gender,
-      release_year, prix, image_url, image_original_url,
+      id, brand, model, slug, category, gender, release_year, prix,
+      drop_mm, poids_g, amorti, stabilite, dynamisme, pronation,
+      foulee, terrain, niveau, objectif, largeur_disponible,
+      description, benefits, image_url, image_url_cdn, image_source_url, image_original_url,
       is_active, is_draft,
-      shoe_images ( id, url_original, url_optimized, is_primary, angle ),
       affiliate_links ( id, merchant, url, price_last_seen, is_active )
     `)
     .eq('id', shoeId)
@@ -293,40 +500,68 @@ async function loadShoe() {
 
   if (data) {
     shoe.value           = data as any
-    shoeImages.value     = (data as any).shoe_images || []
     affiliateLinks.value = (data as any).affiliate_links || []
-    // Pré-remplir le champ URL source avec la valeur actuelle
-    sourceUrlInput.value = (data as any).image_original_url || ''
+
+    // Remplir le formulaire
+    const s = data as any
+    Object.assign(form, {
+      brand:              s.brand || '',
+      model:              s.model || '',
+      slug:               s.slug  || s.id,
+      category:           s.category    || '',
+      gender:             s.gender      || 'unisexe',
+      release_year:       s.release_year ?? null,
+      prix:               s.prix        ?? 0,
+      drop_mm:            s.drop_mm     ?? 0,
+      poids_g:            s.poids_g     ?? 0,
+      amorti:             s.amorti      || 'moyen',
+      stabilite:          s.stabilite   || 'moyenne',
+      dynamisme:          s.dynamisme   || 'moyen',
+      pronation:          s.pronation   || '',
+      foulee:             s.foulee             || [],
+      terrain:            s.terrain            || [],
+      niveau:             s.niveau             || [],
+      objectif:           s.objectif           || [],
+      largeur_disponible: s.largeur_disponible || [],
+      description:        s.description        || '',
+    })
+    benefitsRaw.value = (s.benefits || []).join('\n')
+    sourceUrlInput.value = s.image_source_url || s.image_original_url || ''
   }
 }
 
-async function saveSourceUrl() {
-  if (!shoe.value) return
-  savingUrl.value = true
-  try {
-    // Passe par le serveur (service_role) pour contourner le RLS
-    // La route synchronise aussi image_url ← image_original_url
-    // pour que l'image soit visible immédiatement dans le catalogue et l'app.
-    const updated = await $fetch<typeof shoe.value>(`/api/admin/shoes/${shoeId}`, {
-      method: 'PATCH',
-      body: { image_original_url: sourceUrlInput.value.trim() || null },
-    })
+// ─── Sauvegarder ──────────────────────────────────────────────────────────────
 
-    shoe.value.image_original_url = updated.image_original_url
-    shoe.value.image_url          = updated.image_url
-    showToast('success', 'URL source sauvegardée — image mise à jour !')
+async function saveShoe() {
+  if (!shoe.value) return
+  saving.value = true
+  try {
+    const benefits = benefitsRaw.value.split('\n').map((l) => l.trim()).filter(Boolean)
+    await $fetch(`/api/admin/shoes/${shoeId}`, {
+      method: 'PATCH',
+      body: {
+        ...form,
+        benefits,
+        category:  form.category  || null,
+        pronation: form.pronation || null,
+      },
+    })
+    await loadShoe()
+    showToast('success', 'Modifications sauvegardées !')
   } catch (err: any) {
     showToast('error', err.data?.statusMessage || err.message)
   } finally {
-    savingUrl.value = false
+    saving.value = false
   }
 }
+
+// ─── Valider ──────────────────────────────────────────────────────────────────
 
 async function validateShoe() {
   validating.value = true
   try {
     await $fetch(`/api/admin/shoes/${shoeId}/validate`, { method: 'POST' })
-    showToast('success', 'Chaussure validée avec succès !')
+    showToast('success', 'Chaussure validée !')
     await loadShoe()
   } catch (err: any) {
     showToast('error', err.data?.statusMessage || err.message)
@@ -334,6 +569,25 @@ async function validateShoe() {
     validating.value = false
   }
 }
+
+// ─── Désactiver ───────────────────────────────────────────────────────────────
+
+async function confirmDeactivate() {
+  if (!shoe.value?.is_active) return
+  if (!confirm(`Désactiver "${shoe.value.brand} ${shoe.value.model}" ? Elle ne sera plus visible dans l'app.`)) return
+  deactivating.value = true
+  try {
+    await $fetch(`/api/admin/shoes/${shoeId}`, { method: 'DELETE' })
+    showToast('success', 'Chaussure désactivée.')
+    await loadShoe()
+  } catch (err: any) {
+    showToast('error', err.data?.statusMessage || err.message)
+  } finally {
+    deactivating.value = false
+  }
+}
+
+// ─── Images ───────────────────────────────────────────────────────────────────
 
 function triggerUpload() {
   if (!uploading.value) imageInput.value?.click()
@@ -358,10 +612,9 @@ async function uploadImage(file: File) {
     form.append('file', file)
     form.append('shoe_id', shoeId)
     form.append('angle', 'side')
-    form.append('is_primary', shoeImages.value.length === 0 ? 'true' : 'false')
-
+    form.append('is_primary', 'true')
     await $fetch('/api/admin/upload-image', { method: 'POST', body: form })
-    showToast('success', 'Image uploadée et optimisée !')
+    showToast('success', 'Image uploadée dans Storage !')
     await loadShoe()
   } catch (err: any) {
     showToast('error', err.data?.statusMessage || err.message)
@@ -370,8 +623,58 @@ async function uploadImage(file: File) {
   }
 }
 
+async function saveSourceUrl() {
+  if (!shoe.value || !sourceUrlInput.value) return
+  savingUrl.value = true
+  try {
+    const updated = await $fetch<any>(`/api/admin/shoes/${shoeId}`, {
+      method: 'PATCH',
+      body: { image_original_url: sourceUrlInput.value.trim() || null },
+    })
+    if (shoe.value) shoe.value.image_url = updated.image_url
+    showToast('success', 'URL sauvegardée !')
+    await loadShoe()
+  } catch (err: any) {
+    showToast('error', err.data?.statusMessage || err.message)
+  } finally {
+    savingUrl.value = false
+  }
+}
+
+async function fetchImageFromUrl() {
+  if (!shoe.value || !sourceUrlInput.value) return
+  fetchingImage.value = true
+  try {
+    const result = await $fetch<{ cdnUrl: string }>(`/api/admin/shoes/${shoeId}/fetch-image`, {
+      method: 'POST',
+      body: { url: sourceUrlInput.value.trim() },
+    })
+    sourceUrlInput.value = ''
+    urlPreviewOk.value = null
+    imageCacheBust.value = Date.now().toString()
+    if (shoe.value) shoe.value.image_url = result.cdnUrl
+    showToast('success', '✅ Image téléchargée et stockée dans Supabase Storage !')
+  } catch (err: any) {
+    showToast('error', err.data?.statusMessage || err.message)
+  } finally {
+    fetchingImage.value = false
+  }
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+
+function onImgError(e: Event) {
+  (e.target as HTMLImageElement).src = '/shoe-placeholder.webp'
+}
+
 function showToast(type: 'success' | 'error', message: string) {
   toast.value = { type, message }
   setTimeout(() => { toast.value = null }, 3500)
 }
 </script>
+
+<style>
+.form-input {
+  @apply w-full bg-gray-800 border border-gray-700 text-white text-sm rounded-lg px-3 py-2 focus:outline-none focus:border-orange-500 transition-colors;
+}
+</style>

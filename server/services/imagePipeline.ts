@@ -11,7 +11,7 @@
 
 import sharp from 'sharp'
 import { getSupabaseAdmin } from '../utils/supabaseAdmin'
-import type { ImagePipelineResult } from '../types/admin'
+import type { ImagePipelineResult, ImageSaveResult } from '../types/admin'
 
 const BUCKET = 'shoes'
 
@@ -131,4 +131,48 @@ export async function processAffiliateImage(
     full: publicUrl(paths.full),
     storagePaths: paths,
   }
+}
+
+/**
+ * Pipeline complet + mise à jour base de données.
+ * Met à jour :
+ *   image_url_cdn      → URL CDN carte (600px) — nouvelle source de vérité
+ *   image_source_url   → URL source utilisée pour le téléchargement
+ *   image_url          → identique à image_url_cdn (compat legacy)
+ *   image_storage_path → chemin card dans Storage (compat legacy)
+ *   last_image_check   → timestamp NOW()
+ *
+ * @param shoeId     ID de la chaussure dans la table shoes
+ * @param sourceUrl  URL source de l'image (CDN marque ou affilié)
+ * @param brandSlug  Slug de la marque  (ex: "nike")
+ * @param shoeSlug   Slug de la chaussure (ex: "pegasus-41")
+ */
+export async function processAndSaveImage(
+  shoeId: string,
+  sourceUrl: string,
+  brandSlug: string,
+  shoeSlug: string,
+): Promise<ImageSaveResult> {
+  // 1. Téléchargement + génération WebP + upload Storage
+  const result = await processAffiliateImage(sourceUrl, brandSlug, shoeSlug)
+
+  // 2. Mise à jour des colonnes image dans shoes
+  const supabase = getSupabaseAdmin()
+  const { error } = await supabase
+    .from('shoes')
+    .update({
+      image_url_cdn:      result.card,                // nouveau — source de vérité CDN
+      image_source_url:   sourceUrl,                  // nouveau — URL de re-téléchargement
+      image_url:          result.card,                // legacy compat
+      image_storage_path: result.storagePaths.card,   // legacy compat
+      last_image_check:   new Date().toISOString(),
+      updated_at:         new Date().toISOString(),
+    })
+    .eq('id', shoeId)
+
+  if (error) {
+    throw new Error(`[imagePipeline] Mise à jour DB échouée (${shoeId}) : ${error.message}`)
+  }
+
+  return { ...result, shoeId, sourceUrl }
 }

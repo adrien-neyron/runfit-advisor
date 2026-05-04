@@ -1,16 +1,17 @@
 <script setup lang="ts">
-import { ArrowLeft, ShoppingBag, Share2, RotateCcw, Sparkles } from 'lucide-vue-next'
+import { ArrowLeft, ShoppingBag, Share2, RotateCcw, Sparkles, ExternalLink } from 'lucide-vue-next'
 import { getRecommendations, type Recommendation } from '~/data/products'
+import type { BestOffer } from '~/composables/useMerchants'
 
 const router = useRouter()
 const user = useSupabaseUser()
 const profileStore = useUserProfileStore()
 const shoesStore = useShoesStore()
-const { fetchMerchantOffers, trackOfferClick } = useMerchants()
+const { fetchBestOffers, buildAffiliateRedirectUrl } = useMerchants()
 const { toast } = useToast()
 
 const recommendations = ref<Recommendation[]>([])
-const bestOffers = ref<Record<string, any>>({})
+const bestOffers = ref<Map<string, BestOffer>>(new Map())
 const redirect = ref<{ merchant: string; url: string; productId: string; model: string } | null>(null)
 
 onMounted(() => shoesStore.fetchShoes())
@@ -24,17 +25,10 @@ watch(
     const recs = getRecommendations(profile, 3, source)
     recommendations.value = recs
 
-    // Charge les meilleures offres marchands en parallèle
-    recs.forEach((rec) => {
-      fetchMerchantOffers(rec.product.id, {
-        brand: rec.product.brand,
-        model: rec.product.model,
-        basePrice: rec.product.prix,
-      }).then((offers) => {
-        const best = offers.find((o) => o.available) ?? null
-        bestOffers.value[rec.product.id] = best
-      })
-    })
+    // Charge les meilleures offres affiliées en une seule requête batch
+    const ids = recs.map((r) => r.product.id)
+    const labels = new Map(recs.map((r) => [r.product.id, `${r.product.brand} ${r.product.model}`]))
+    bestOffers.value = await fetchBestOffers(ids, labels)
   },
   { immediate: true },
 )
@@ -49,41 +43,36 @@ watch(
 )
 
 const handleBuy = (productId: string, model: string) => {
-  if (!user.value) {
-    toast({ title: 'Connexion requise', description: 'Connectez-vous pour accéder aux offres d\'achat.' })
-    router.push('/connexion')
+  const offer = bestOffers.value.get(productId)
+
+  if (!offer) {
+    router.push(`/shoes/${productId}`)
     return
   }
 
-  const offer = bestOffers.value[productId]
-  if (!offer || !offer.available || !offer.affiliateUrl) {
-    toast({ title: 'Offre indisponible', description: 'Cette chaussure n\'est plus disponible chez ce marchand.' })
-    return
-  }
-
-  if (offer.urlStatus === 'fallback') {
-    toast({
-      title: 'Lien produit mis à jour',
-      description: 'Redirection vers une recherche du modèle chez ce marchand.',
-    })
-  }
-
-  redirect.value = { merchant: offer.merchant, url: offer.affiliateUrl, productId, model }
+  // URL de l'endpoint serveur : tracking + tag affilié garantis
+  const url = buildAffiliateRedirectUrl(productId, offer.merchant)
+  redirect.value = { merchant: offer.merchant, url, productId, model }
 }
 
 const confirmRedirect = () => {
   if (!redirect.value) return
-  trackOfferClick({
-    productId: redirect.value.productId,
-    retailerName: redirect.value.merchant,
-    shoeModel: redirect.value.model,
-  })
+  // Le tracking est géré côté serveur dans /api/affiliate/:merchant/:shoeId
   window.open(redirect.value.url, '_blank', 'noopener,noreferrer')
   redirect.value = null
 }
 
 // Score ring helper
 const scorePercent = (score: number) => Math.min(100, Math.round((score / 90) * 100))
+
+// Label du bouton d'achat
+// On n'affiche pas le prix stocké en DB — il peut être obsolète (scraping > 24h).
+// Le marchand affiche le prix réel au moment du clic.
+const buyLabel = (productId: string) => {
+  const offer = bestOffers.value.get(productId)
+  if (!offer) return 'Voir le meilleur prix'
+  return `Voir le meilleur prix chez ${offer.merchant}`
+}
 </script>
 
 <template>
@@ -251,17 +240,20 @@ const scorePercent = (score: number) => Math.min(100, Math.round((score / 90) * 
                 <div class="mt-auto flex gap-3">
                   <UiButton
                     variant="hero"
-                    class="flex-1 gap-2"
-                    @click="router.push(`/shoes/${rec.product.id}`)"
+                    class="flex-1 gap-2 truncate"
+                    @click="handleBuy(rec.product.id, rec.product.model)"
                   >
-                    <ShoppingBag class="w-4 h-4" />
-                    Voir les prix
+                    <ExternalLink class="w-4 h-4 shrink-0" />
+                    <span class="truncate">{{ buyLabel(rec.product.id) }}</span>
                   </UiButton>
                 </div>
               </div>
             </div>
           </article>
         </div>
+
+        <!-- Mention légale affiliés (obligatoire Amazon Associates) -->
+        <AffiliateDisclosure class="text-center" />
 
         <!-- CTA mode Swipe -->
         <div class="text-center mt-10 space-y-3">

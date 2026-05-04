@@ -19,17 +19,28 @@ const ALLOWED_FIELDS = new Set([
   'image_url',
   'model',
   'brand',
+  'slug',
   'category',
-  'pronation',
-  'terrain_type',
   'gender',
   'release_year',
-  'drop_mm',
-  'weight_g',
   'prix',
+  'drop_mm',
+  'poids_g',
+  'weight_g',
+  'amorti',
+  'stabilite',
+  'dynamisme',
+  'pronation',
+  'terrain_type',
+  'foulee',
+  'terrain',
+  'niveau',
+  'objectif',
+  'largeur_disponible',
+  'description',
+  'benefits',
   'is_active',
   'is_draft',
-  'slug',
 ])
 
 export default defineEventHandler(async (event) => {
@@ -57,10 +68,24 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: 'Aucun champ valide à mettre à jour.' })
   }
 
+  // Coercions de types pour correspondre au schéma Postgres
+  // Champs INTEGER : rejettent les floats → on arrondit
+  const INTEGER_FIELDS = ['drop_mm', 'poids_g', 'weight_g', 'release_year']
+  for (const field of INTEGER_FIELDS) {
+    if (field in updates && updates[field] !== null && updates[field] !== undefined) {
+      updates[field] = Math.round(Number(updates[field]))
+    }
+  }
+
+  // Champs avec contrainte CHECK : vide string → null
+  const NULLABLE_FIELDS = ['category', 'gender', 'pronation', 'terrain_type']
+  for (const field of NULLABLE_FIELDS) {
+    if (field in updates && updates[field] === '') {
+      updates[field] = null
+    }
+  }
+
   // Synchronisation automatique image_url ← image_original_url
-  // Si on fournit une URL source mais pas d'image_url explicite,
-  // on utilise l'URL source comme image affichée (hotlink direct).
-  // Le pipeline Sharp remplacera ça par une URL Storage lors du validate.
   if ('image_original_url' in updates && !('image_url' in updates)) {
     updates.image_url = updates.image_original_url
   }

@@ -50,7 +50,7 @@ export default defineNuxtConfig({
         '/confidentialite',
         '/connexion',
         '/confirm',
-        '/admin/login', // Auth admin gérée manuellement
+        '/admin/**', // Auth admin gérée par middleware/admin.ts
       ],
     },
   },

@@ -3,6 +3,8 @@ import type { UserProfile } from '~/data/products'
 
 const SESSION_KEY = 'runmatch-profile'
 
+const OPTIONAL_FIELDS: (keyof UserProfile)[] = ['budget', 'voutePlantaire', 'volume']
+
 function toUserProfile(row: Record<string, unknown>): UserProfile {
   return {
     sexe: (row.sexe as string) || 'homme',
@@ -17,6 +19,9 @@ function toUserProfile(row: Record<string, unknown>): UserProfile {
     amortPreference: (row.amort_preference as string) || 'moyen',
     taille: (row.taille as number) ?? 175,
     poids: (row.poids as number) ?? 70,
+    budget: (row.budget as string) || undefined,
+    voutePlantaire: (row.voute_plantaire as string) || undefined,
+    volume: (row.volume as string) || undefined,
   }
 }
 
@@ -81,6 +86,9 @@ export const useUserProfileStore = defineStore('userProfile', () => {
           amort_preference: p.amortPreference,
           taille: p.taille,
           poids: p.poids,
+          budget: p.budget ?? null,
+          voute_plantaire: p.voutePlantaire ?? null,
+          volume: p.volume ?? null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },
@@ -88,5 +96,20 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     }
   }
 
-  return { profile, loading, saveProfile, loadProfile }
+  // Complétion des champs optionnels (0–100%)
+  const enrichmentComplete = computed(() =>
+    !!profile.value && OPTIONAL_FIELDS.every(f => !!profile.value![f]),
+  )
+
+  const enrichmentProgress = computed(() => {
+    if (!profile.value) return 0
+    const filled = OPTIONAL_FIELDS.filter(f => !!profile.value![f]).length
+    return Math.round((filled / OPTIONAL_FIELDS.length) * 100)
+  })
+
+  const missingOptionalFields = computed(() =>
+    OPTIONAL_FIELDS.filter(f => !profile.value?.[f]),
+  )
+
+  return { profile, loading, saveProfile, loadProfile, enrichmentComplete, enrichmentProgress, missingOptionalFields }
 })

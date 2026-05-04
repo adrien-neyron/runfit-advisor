@@ -185,6 +185,7 @@ function onPointerUp() {
             <p class="text-sm font-black capitalize mt-0.5">{{ spec.value }}</p>
           </div>
         </div>
+
       </div>
     </div>
   </div>

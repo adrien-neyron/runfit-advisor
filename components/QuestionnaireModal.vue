@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, X, Check, Sparkles } from 'lucide-vue-next'
+import { ArrowLeft, ArrowRight, X, Check, Sparkles, ChevronRight } from 'lucide-vue-next'
 import type { UserProfile } from '~/data/products'
 
 interface QuestionOption {
@@ -16,7 +16,10 @@ interface Question {
   options: QuestionOption[]
 }
 
+// ─── Questions ────────────────────────────────────────────────────────────────
+
 const questions: Question[] = [
+  // ── CORE (Q1–Q5) ──
   {
     id: 'sexe',
     title: 'Tu es ?',
@@ -68,6 +71,7 @@ const questions: Question[] = [
       { value: 'mixte', label: 'Les deux', emoji: '🔄', description: 'Route et sentiers en alternance' },
     ],
   },
+  // ── ENRICHISSEMENT (Q6–Q13) ──
   {
     id: 'objectif',
     title: 'Tu cours pour ?',
@@ -117,12 +121,47 @@ const questions: Question[] = [
       { value: 'élevé', label: 'Un maximum de moelleux', emoji: '☁️', description: 'Confort et protection maximaux' },
     ],
   },
+  {
+    id: 'volume',
+    title: "Combien de km par semaine ?",
+    subtitle: 'Influence la durabilité et le niveau d\'amorti idéal',
+    options: [
+      { value: '0-10', label: 'Moins de 10 km', emoji: '🌱', description: 'Débutant ou reprise' },
+      { value: '10-25', label: '10 à 25 km', emoji: '🏃', description: 'Coureur régulier' },
+      { value: '25-50', label: '25 à 50 km', emoji: '⚡', description: 'Entraînement soutenu' },
+      { value: '50+', label: 'Plus de 50 km', emoji: '🔥', description: 'Athlète accompli' },
+    ],
+  },
+  {
+    id: 'voutePlantaire',
+    title: 'Ta voûte plantaire ?',
+    subtitle: 'Influence le maintien et le soutien de la chaussure',
+    options: [
+      { value: 'plat', label: 'Pied plat', emoji: '➖', description: 'Voûte basse — nécessite du soutien' },
+      { value: 'normale', label: 'Normale', emoji: '📐', description: 'Voûte standard' },
+      { value: 'creux', label: 'Pied creux', emoji: '⬆️', description: 'Voûte prononcée — besoin d\'amorti' },
+      { value: 'inconnu', label: 'Je ne sais pas', emoji: '❓' },
+    ],
+  },
+  {
+    id: 'budget',
+    title: 'Ton budget ?',
+    subtitle: 'Pour te montrer uniquement des modèles accessibles',
+    options: [
+      { value: '<100', label: 'Moins de 100 €', emoji: '💚', description: 'Bon rapport qualité/prix' },
+      { value: '100-140', label: '100 – 140 €', emoji: '💛', description: 'Milieu de gamme' },
+      { value: '140-180', label: '140 – 180 €', emoji: '🧡', description: 'Haut de gamme' },
+      { value: '180+', label: '180 € et plus', emoji: '❤️', description: 'Top performance' },
+    ],
+  },
 ]
 
-// Simulation chaussures éliminées par étape
-const REMAINING = [120, 84, 61, 45, 33, 23, 15, 10, 7, 4, 3]
+// Nombre de questions core (Q1–Q5)
+const CORE_COUNT = 5
 
-// Micro-feedback contextuel par question
+// Simulation modèles compatibles par palier de réponses
+const REMAINING = [120, 84, 61, 45, 33, 23, 15, 12, 10, 8, 6, 4, 3]
+
 const FEEDBACKS: Record<string, string> = {
   sexe: 'Morphologie prise en compte',
   foulee: 'On cible déjà les bonnes semelles',
@@ -132,14 +171,21 @@ const FEEDBACKS: Record<string, string> = {
   objectif: 'On priorise ce qui compte',
   largeurPied: 'Chaussant affiné',
   blessures: 'Soutien intégré au profil',
-  dropPreference: 'Géométrie ajustée — encore une !',
-  amortPreference: 'Profil complet !',
+  dropPreference: 'Géométrie ajustée',
+  amortPreference: 'Amorti calibré',
+  volume: 'Volume pris en compte',
+  voutePlantaire: 'Morphologie affinée',
+  budget: 'Budget intégré !',
 }
+
+// ─── Props ────────────────────────────────────────────────────────────────────
 
 interface Props {
   open: boolean
   initialAnswers?: Partial<UserProfile>
   onComplete?: () => void
+  /** Mode enrichissement : démarre directement aux nouvelles questions optionnelles */
+  enrichmentOnly?: boolean
 }
 
 const props = defineProps<Props>()
@@ -148,20 +194,44 @@ const emit = defineEmits<{ close: [] }>()
 const router = useRouter()
 const profileStore = useUserProfileStore()
 
-const step            = ref(0)
-const answers         = ref<Partial<UserProfile>>({ taille: 175, poids: 70 })
-const showTeaser      = ref(false)
-const showAnalysis    = ref(false)
-const analysisStage   = ref<'analyzing' | 'found'>('analyzing')
-const feedbackText    = ref('')
-const feedbackVisible = ref(false)
-const selecting       = ref(false)
+// ─── State ────────────────────────────────────────────────────────────────────
 
-const current       = computed(() => questions[step.value])
+const step              = ref(0)
+const answers           = ref<Partial<UserProfile>>({ taille: 175, poids: 70 })
+const showCoreComplete  = ref(false)
+const showTeaser        = ref(false)
+const showAnalysis      = ref(false)
+const analysisStage     = ref<'analyzing' | 'found'>('analyzing')
+const feedbackText      = ref('')
+const feedbackVisible   = ref(false)
+const selecting         = ref(false)
+
+// ─── Computed ─────────────────────────────────────────────────────────────────
+
+// Étape de départ selon le mode
+const startStep = computed(() => {
+  if (!props.enrichmentOnly) return 0
+  const idx = questions.findIndex(q => q.id === 'volume')
+  return idx >= 0 ? idx : CORE_COUNT
+})
+
+const current = computed(() => questions[step.value])
+
 const answeredCount = computed(() =>
-  Object.keys(answers.value).filter((k) => !['taille', 'poids'].includes(k)).length,
+  Object.keys(answers.value).filter(k => !['taille', 'poids'].includes(k)).length,
 )
-const remainingCount = computed(() => REMAINING[Math.min(answeredCount.value, REMAINING.length - 1)])
+
+const remainingCount = computed(() =>
+  REMAINING[Math.min(answeredCount.value, REMAINING.length - 1)],
+)
+
+// Affichage de la progression (relatif au mode)
+const displayStep = computed(() =>
+  props.enrichmentOnly ? step.value - startStep.value + 1 : step.value + 1,
+)
+const displayTotal = computed(() =>
+  props.enrichmentOnly ? questions.length - startStep.value : questions.length,
+)
 
 const profileBars = computed(() => {
   const a = answers.value
@@ -173,6 +243,7 @@ const profileBars = computed(() => {
   else if (a.foulee === 'neutre') stabilite += 18
   if (a.blessures === 'oui') stabilite += 22
   if (a.objectif === 'prévention') stabilite += 15
+  if (a.voutePlantaire === 'plat') stabilite += 15
 
   if (a.amortPreference === 'élevé') amorti += 58
   else if (a.amortPreference === 'moyen') amorti += 32
@@ -180,6 +251,7 @@ const profileBars = computed(() => {
   if (['marathon', 'ultra'].includes(a.distance as string)) amorti += 12
   if (a.objectif === 'confort') amorti += 10
   if (a.dropPreference === 'élevé') amorti += 8
+  if (a.voutePlantaire === 'creux') amorti += 12
 
   if (a.objectif === 'performance') dynamisme += 52
   else if (a.objectif === 'confort') dynamisme += 12
@@ -211,21 +283,33 @@ const teaserLines = computed(() => {
   else if (a.dropPreference === 'faible') lines.push('Drop faible (0–6 mm)')
   else lines.push('Drop polyvalent (7–9 mm)')
 
-  return lines
+  if (a.budget) {
+    const budgetLabel: Record<string, string> = {
+      '<100': 'Budget < 100 €',
+      '100-140': 'Budget 100–140 €',
+      '140-180': 'Budget 140–180 €',
+      '180+': 'Budget 180 €+',
+    }
+    lines.push(budgetLabel[a.budget] ?? '')
+  }
+
+  return lines.filter(Boolean)
 })
 
-// Reset à l'ouverture
+// ─── Watchers ─────────────────────────────────────────────────────────────────
+
 watch(
   () => props.open,
   (val) => {
     if (val) {
-      step.value          = 0
-      showTeaser.value    = false
-      showAnalysis.value  = false
-      analysisStage.value = 'analyzing'
+      step.value            = startStep.value
+      showCoreComplete.value = false
+      showTeaser.value      = false
+      showAnalysis.value    = false
+      analysisStage.value   = 'analyzing'
       feedbackVisible.value = false
-      selecting.value     = false
-      answers.value       = props.initialAnswers
+      selecting.value       = false
+      answers.value         = props.initialAnswers
         ? { taille: 175, poids: 70, ...props.initialAnswers }
         : { taille: 175, poids: 70 }
     }
@@ -240,10 +324,62 @@ onMounted(() => {
 })
 watch(() => props.open, (val) => { document.body.style.overflow = val ? 'hidden' : '' })
 
+// ─── Actions ──────────────────────────────────────────────────────────────────
+
 const triggerFeedback = (questionId: string) => {
   feedbackText.value    = FEEDBACKS[questionId] ?? ''
   feedbackVisible.value = true
   setTimeout(() => (feedbackVisible.value = false), 1200)
+}
+
+const buildProfile = (updated: Partial<UserProfile>): UserProfile => ({
+  sexe:            (updated.sexe as string)            || 'homme',
+  taille:           updated.taille                     || 175,
+  poids:            updated.poids                      || 70,
+  largeurPied:     (updated.largeurPied as string)     || 'standard',
+  foulee:          (updated.foulee as string)          || 'neutre',
+  niveau:          (updated.niveau as string)          || 'débutant',
+  distance:        (updated.distance as string)        || '10km',
+  terrain:         (updated.terrain as string)         || 'route',
+  objectif:        (updated.objectif as string)        || 'confort',
+  blessures:       (updated.blessures as string)       || 'non',
+  dropPreference:  (updated.dropPreference as string)  || 'moyen',
+  amortPreference: (updated.amortPreference as string) || 'moyen',
+  budget:          updated.budget          as string | undefined,
+  voutePlantaire:  updated.voutePlantaire  as string | undefined,
+  volume:          updated.volume          as string | undefined,
+})
+
+const launchAnalysis = async (profile: UserProfile) => {
+  showAnalysis.value  = true
+  analysisStage.value = 'analyzing'
+  await profileStore.saveProfile(profile)
+  setTimeout(() => {
+    analysisStage.value = 'found'
+    setTimeout(() => {
+      emit('close')
+      if (props.onComplete) props.onComplete()
+      else router.push('/swipe')
+    }, 1400)
+  }, 1900)
+}
+
+// Quitter après les 5 questions core — recommandations de base
+const skipToResults = async () => {
+  showCoreComplete.value = false
+  await launchAnalysis(buildProfile(answers.value))
+}
+
+// Continuer vers les questions d'enrichissement
+const continueFromCore = () => {
+  showCoreComplete.value = false
+  step.value = CORE_COUNT
+  selecting.value = false
+}
+
+const continueFromTeaser = () => {
+  showTeaser.value = false
+  step.value++
 }
 
 const handleSelect = async (value: string) => {
@@ -251,46 +387,27 @@ const handleSelect = async (value: string) => {
   selecting.value = true
 
   const updated = { ...answers.value, [current.value.id]: value }
-  answers.value  = updated
+  answers.value = updated
   triggerFeedback(current.value.id)
 
-  const isLast         = step.value === questions.length - 1
-  const isPenultimate  = step.value === questions.length - 2
+  const isLast        = step.value === questions.length - 1
+  const isPenultimate = step.value === questions.length - 2
+  // Fin des 5 questions core (sauf en mode enrichissement où on skipe cet écran)
+  const isCoreEnd = !props.enrichmentOnly && step.value === CORE_COUNT - 1
 
   if (isLast) {
-    // Animation finale puis sauvegarde
-    const profile: UserProfile = {
-      sexe:           (updated.sexe as string)           || 'homme',
-      taille:          updated.taille                    || 175,
-      poids:           updated.poids                     || 70,
-      largeurPied:    (updated.largeurPied as string)    || 'standard',
-      foulee:         (updated.foulee as string)         || 'neutre',
-      niveau:         (updated.niveau as string)         || 'débutant',
-      distance:       (updated.distance as string)       || '10km',
-      terrain:        (updated.terrain as string)        || 'route',
-      objectif:       (updated.objectif as string)       || 'confort',
-      blessures:      (updated.blessures as string)      || 'non',
-      dropPreference: (updated.dropPreference as string) || 'moyen',
-      amortPreference:(updated.amortPreference as string)|| 'moyen',
-    }
     setTimeout(async () => {
-      showAnalysis.value  = true
-      analysisStage.value = 'analyzing'
-      await profileStore.saveProfile(profile)
-      setTimeout(() => {
-        analysisStage.value = 'found'
-        setTimeout(() => {
-          emit('close')
-          if (props.onComplete) props.onComplete()
-          else router.push('/swipe')
-        }, 1400)
-      }, 1900)
+      await launchAnalysis(buildProfile(updated))
     }, 250)
-  } else if (isPenultimate) {
-    // Teaser avant la dernière question
+  } else if (isPenultimate && !isCoreEnd) {
     setTimeout(() => {
       showTeaser.value = true
       selecting.value  = false
+    }, 300)
+  } else if (isCoreEnd) {
+    setTimeout(() => {
+      showCoreComplete.value = true
+      selecting.value        = false
     }, 300)
   } else {
     setTimeout(() => {
@@ -298,11 +415,6 @@ const handleSelect = async (value: string) => {
       selecting.value = false
     }, 300)
   }
-}
-
-const continueFromTeaser = () => {
-  showTeaser.value = false
-  step.value++
 }
 </script>
 
@@ -333,7 +445,7 @@ const continueFromTeaser = () => {
 
           <Transition name="screen-fade" mode="out-in">
 
-            <!-- ═══ ÉCRAN ANALYSE ══════════════════════════════════════════════ -->
+            <!-- ═══ ANALYSE ═══════════════════════════════════════════════════════ -->
             <div v-if="showAnalysis" key="analysis" class="px-8 py-20 text-center">
               <Transition name="screen-fade" mode="out-in">
                 <div v-if="analysisStage === 'analyzing'" key="analyzing" class="space-y-5">
@@ -357,7 +469,58 @@ const continueFromTeaser = () => {
               </Transition>
             </div>
 
-            <!-- ═══ ÉCRAN TEASER ═══════════════════════════════════════════════ -->
+            <!-- ═══ CORE COMPLET — SKIP ou CONTINUER ═════════════════════════════ -->
+            <div v-else-if="showCoreComplete" key="core-complete" class="px-8 pt-9 pb-8">
+              <div class="text-center mb-5">
+                <div class="w-14 h-14 mx-auto rounded-full accent-gradient flex items-center justify-center mb-4">
+                  <Sparkles class="w-7 h-7 text-white" />
+                </div>
+                <p class="text-xl font-black tracking-tight leading-tight">
+                  Tes premières sélections<br />sont prêtes !
+                </p>
+                <p class="text-xs text-muted-foreground mt-1.5">
+                  Continue pour affiner encore plus
+                </p>
+              </div>
+
+              <!-- Profil running -->
+              <div class="space-y-2 mb-5">
+                <p class="text-[10px] text-muted-foreground font-medium uppercase tracking-widest mb-2">
+                  Ton profil running
+                </p>
+                <div v-for="bar in profileBars" :key="bar.label" class="flex items-center gap-3">
+                  <span class="text-[11px] text-muted-foreground w-16 shrink-0">{{ bar.label }}</span>
+                  <div class="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                    <div
+                      class="h-full rounded-full accent-gradient transition-all duration-700 ease-out"
+                      :style="{ width: `${bar.value}%` }"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hint -->
+              <div class="bg-primary/5 border border-primary/20 rounded-xl p-3 mb-5 text-center">
+                <p class="text-xs text-primary font-medium">
+                  8 questions de plus → budget, voûte, volume d'entraînement
+                </p>
+              </div>
+
+              <div class="space-y-2">
+                <UiButton variant="hero" class="w-full gap-2" @click="continueFromCore">
+                  Affiner mes recommandations
+                  <ArrowRight class="w-4 h-4" />
+                </UiButton>
+                <button
+                  class="w-full text-sm text-muted-foreground hover:text-foreground py-2 transition-colors"
+                  @click="skipToResults"
+                >
+                  Voir mes résultats maintenant →
+                </button>
+              </div>
+            </div>
+
+            <!-- ═══ TEASER ════════════════════════════════════════════════════════ -->
             <div v-else-if="showTeaser" key="teaser" class="px-8 pt-9 pb-8">
               <div class="text-center mb-6">
                 <div class="w-14 h-14 mx-auto rounded-full accent-gradient flex items-center justify-center mb-4">
@@ -405,17 +568,24 @@ const continueFromTeaser = () => {
               </UiButton>
             </div>
 
-            <!-- ═══ QUESTIONS ══════════════════════════════════════════════════ -->
+            <!-- ═══ QUESTIONS ═════════════════════════════════════════════════════ -->
             <div v-else key="questions" class="px-8 pt-8 pb-6 sm:px-10 sm:pt-9">
-              <!-- Brand + compteur chaussures -->
+              <!-- Brand + badge mode enrichissement -->
               <div class="text-center mb-5">
                 <span class="text-2xl font-black tracking-tighter">
                   RUN<span class="text-gradient">MATCH</span>
                 </span>
-                <div class="mt-2.5 flex items-center justify-center gap-1.5">
+                <div class="mt-2.5 flex items-center justify-center gap-2">
                   <span class="inline-flex items-center gap-1.5 bg-primary/10 text-primary text-xs font-bold px-3 py-1 rounded-full">
                     <span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                     {{ remainingCount }} modèles compatibles
+                  </span>
+                  <span
+                    v-if="enrichmentOnly"
+                    class="inline-flex items-center gap-1 bg-secondary text-muted-foreground text-xs font-medium px-2 py-1 rounded-full"
+                  >
+                    <ChevronRight class="w-3 h-3" />
+                    Enrichissement
                   </span>
                 </div>
               </div>
@@ -425,19 +595,19 @@ const continueFromTeaser = () => {
                 <div class="flex items-center justify-between mb-1.5">
                   <button
                     class="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-                    @click="step > 0 ? step-- : emit('close')"
+                    @click="step > startStep ? step-- : emit('close')"
                   >
                     <ArrowLeft class="w-3.5 h-3.5" />
-                    {{ step > 0 ? 'Précédent' : 'Retour' }}
+                    {{ step > startStep ? 'Précédent' : 'Retour' }}
                   </button>
                   <span class="text-xs text-muted-foreground font-medium tabular-nums">
-                    {{ step + 1 }} / {{ questions.length }}
+                    {{ displayStep }} / {{ displayTotal }}
                   </span>
                 </div>
                 <div class="h-1.5 bg-secondary rounded-full overflow-hidden">
                   <div
                     class="h-full accent-gradient rounded-full transition-all duration-400 ease-out"
-                    :style="{ width: `${((answeredCount) / questions.length) * 100}%` }"
+                    :style="{ width: `${(answeredCount / questions.length) * 100}%` }"
                   />
                 </div>
               </div>

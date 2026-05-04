@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, Pencil, LogOut, Heart, Sparkles } from 'lucide-vue-next'
+import { ArrowLeft, Pencil, LogOut, Heart, Sparkles, CircleDashed } from 'lucide-vue-next'
 import { shoes } from '~/data/shoes'
 import { getRecommendations } from '~/data/products'
 
@@ -10,7 +10,8 @@ const profileStore = useUserProfileStore()
 const matchesStore = useMatchesStore()
 const shoesStore   = useShoesStore()
 
-const modalOpen = ref(false)
+const modalOpen           = ref(false)
+const enrichmentModalOpen = ref(false)
 
 onMounted(() => shoesStore.fetchShoes())
 
@@ -23,30 +24,49 @@ watchEffect(() => {
 // ─── Labels questionnaire ─────────────────────────────────────────────────────
 
 const LABELS: Record<string, Record<string, string>> = {
-  sexe:           { homme: 'Homme', femme: 'Femme' },
-  foulee:         { pronateur: 'Pronateur', neutre: 'Neutre', supinateur: 'Supinateur' },
-  niveau:         { débutant: 'Débutant', intermédiaire: 'Intermédiaire', avancé: 'Avancé' },
-  distance:       { '5km': '5 km', '10km': '10 km', semi: 'Semi-marathon', marathon: 'Marathon', ultra: 'Ultra' },
-  terrain:        { route: 'Route', trail: 'Trail', mixte: 'Mixte' },
-  objectif:       { performance: 'Performance', confort: 'Confort', prévention: 'Prévention blessures' },
-  largeurPied:    { étroit: 'Étroit', standard: 'Standard', large: 'Large' },
-  blessures:      { oui: 'Oui', non: 'Non' },
-  dropPreference: { faible: 'Drop faible (0-6mm)', moyen: 'Drop moyen (7-9mm)', élevé: 'Drop élevé (10-12mm)' },
-  amortPreference:{ faible: 'Faible', moyen: 'Moyen', élevé: 'Élevé' },
+  sexe:            { homme: 'Homme', femme: 'Femme' },
+  foulee:          { pronateur: 'Pronateur', neutre: 'Neutre', supinateur: 'Supinateur' },
+  niveau:          { débutant: 'Débutant', intermédiaire: 'Intermédiaire', avancé: 'Avancé' },
+  distance:        { '5km': '5 km', '10km': '10 km', semi: 'Semi-marathon', marathon: 'Marathon', ultra: 'Ultra' },
+  terrain:         { route: 'Route', trail: 'Trail', mixte: 'Mixte' },
+  objectif:        { performance: 'Performance', confort: 'Confort', prévention: 'Prévention blessures' },
+  largeurPied:     { étroit: 'Étroit', standard: 'Standard', large: 'Large' },
+  blessures:       { oui: 'Oui', non: 'Non' },
+  dropPreference:  { faible: 'Drop faible (0-6mm)', moyen: 'Drop moyen (7-9mm)', élevé: 'Drop élevé (10-12mm)' },
+  amortPreference: { faible: 'Faible', moyen: 'Moyen', élevé: 'Élevé' },
+  volume:          { '0-10': '0–10 km/sem', '10-25': '10–25 km/sem', '25-50': '25–50 km/sem', '50+': '50+ km/sem' },
+  voutePlantaire:  { plat: 'Pied plat', normale: 'Normale', creux: 'Pied creux', inconnu: 'Je ne sais pas' },
+  budget:          { '<100': '< 100 €', '100-140': '100–140 €', '140-180': '140–180 €', '180+': '180 € et +' },
 }
 
 const SECTIONS = [
-  { key: 'sexe',            label: 'Profil' },
-  { key: 'foulee',          label: 'Foulée' },
-  { key: 'niveau',          label: 'Niveau' },
-  { key: 'distance',        label: 'Distance habituelle' },
-  { key: 'terrain',         label: 'Terrain' },
-  { key: 'objectif',        label: 'Objectif' },
-  { key: 'largeurPied',     label: 'Largeur du pied' },
-  { key: 'blessures',       label: 'Historique blessures' },
-  { key: 'dropPreference',  label: 'Drop préféré' },
-  { key: 'amortPreference', label: 'Amorti préféré' },
+  { key: 'sexe',            label: 'Profil',                optional: false },
+  { key: 'foulee',          label: 'Foulée',                optional: false },
+  { key: 'niveau',          label: 'Niveau',                optional: false },
+  { key: 'distance',        label: 'Distance habituelle',   optional: false },
+  { key: 'terrain',         label: 'Terrain',               optional: false },
+  { key: 'objectif',        label: 'Objectif',              optional: false },
+  { key: 'largeurPied',     label: 'Largeur du pied',       optional: false },
+  { key: 'blessures',       label: 'Historique blessures',  optional: false },
+  { key: 'dropPreference',  label: 'Drop préféré',          optional: false },
+  { key: 'amortPreference', label: 'Amorti préféré',        optional: false },
+  { key: 'volume',          label: 'Volume hebdomadaire',   optional: true },
+  { key: 'voutePlantaire',  label: 'Voûte plantaire',       optional: true },
+  { key: 'budget',          label: 'Budget',                optional: true },
 ]
+
+const OPTIONAL_LABELS: Record<string, string> = {
+  volume:         "Volume d'entraînement",
+  voutePlantaire: 'Voûte plantaire',
+  budget:         'Budget',
+}
+
+const missingFieldsDisplay = computed(() =>
+  profileStore.missingOptionalFields.map(f => ({
+    key: f as string,
+    label: OPTIONAL_LABELS[f as string] ?? String(f),
+  })),
+)
 
 // ─── Matchs ───────────────────────────────────────────────────────────────────
 
@@ -131,7 +151,7 @@ const recommendations = computed(() => {
 
         <div v-else class="rounded-2xl border border-border bg-card divide-y divide-border overflow-hidden">
           <div
-            v-for="section in SECTIONS"
+            v-for="section in SECTIONS.filter(s => !s.optional || profileStore.profile?.[s.key as keyof typeof profileStore.profile])"
             :key="section.key"
             class="flex items-center justify-between px-5 py-3"
           >
@@ -140,6 +160,52 @@ const recommendations = computed(() => {
               {{ LABELS[section.key]?.[String(profileStore.profile[section.key as keyof typeof profileStore.profile])] ?? String(profileStore.profile[section.key as keyof typeof profileStore.profile]) }}
             </span>
           </div>
+        </div>
+
+        <!-- ── BANNIÈRE ENRICHISSEMENT ──────────────────────────────────────── -->
+        <div
+          v-if="profileStore.profile && !profileStore.enrichmentComplete"
+          class="mt-4 rounded-2xl border border-primary/30 bg-primary/5 p-5"
+        >
+          <div class="flex items-start gap-3 mb-3">
+            <div class="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
+              <CircleDashed class="w-4 h-4 text-primary" />
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="font-bold text-sm">Affiner tes recommandations</p>
+              <p class="text-xs text-muted-foreground mt-0.5">
+                {{ missingFieldsDisplay.length }} question{{ missingFieldsDisplay.length > 1 ? 's' : '' }} pour de meilleurs résultats
+              </p>
+            </div>
+            <span class="text-xs font-bold text-primary">
+              {{ profileStore.enrichmentProgress }}%
+            </span>
+          </div>
+
+          <!-- Barre de progression -->
+          <div class="h-1.5 bg-primary/20 rounded-full overflow-hidden mb-3">
+            <div
+              class="h-full rounded-full bg-primary transition-all"
+              :style="{ width: `${profileStore.enrichmentProgress}%` }"
+            />
+          </div>
+
+          <!-- Champs manquants -->
+          <div class="space-y-1 mb-4">
+            <div
+              v-for="field in missingFieldsDisplay"
+              :key="field.key"
+              class="flex items-center gap-2 text-xs text-muted-foreground"
+            >
+              <span class="w-1.5 h-1.5 rounded-full bg-primary/40 shrink-0" />
+              {{ field.label }}
+            </div>
+          </div>
+
+          <UiButton size="sm" class="w-full" @click="enrichmentModalOpen = true">
+            <Sparkles class="w-3.5 h-3.5 mr-1.5" />
+            Compléter mon profil
+          </UiButton>
         </div>
       </section>
 
@@ -278,11 +344,21 @@ const recommendations = computed(() => {
       </div>
     </div>
 
+    <!-- Modal modification complète -->
     <QuestionnaireModal
       :open="modalOpen"
       :initial-answers="profileStore.profile ?? undefined"
       :on-complete="() => (modalOpen = false)"
       @close="modalOpen = false"
+    />
+
+    <!-- Modal enrichissement (nouvelles questions uniquement) -->
+    <QuestionnaireModal
+      :open="enrichmentModalOpen"
+      :initial-answers="profileStore.profile ?? undefined"
+      :enrichment-only="true"
+      :on-complete="() => (enrichmentModalOpen = false)"
+      @close="enrichmentModalOpen = false"
     />
   </div>
 </template>

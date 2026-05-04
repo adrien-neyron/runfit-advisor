@@ -20,6 +20,9 @@ interface ShoeRow {
   objectif: string[]
   benefits: string[]
   image_url: string | null
+  image_url_cdn: string | null  // URL CDN Storage — source de vérité
+  offer_count_active: number
+  price_min: number | null
 }
 
 function mapRowToProduct(row: ShoeRow): Product {
@@ -28,7 +31,7 @@ function mapRowToProduct(row: ShoeRow): Product {
     brand: row.brand,
     model: row.model,
     description: row.description,
-    prix: row.prix,
+    prix: row.prix,  // prix catalogue statique — price_min sert au tri/filtre, pas à l'affichage
     foulee: row.foulee as Product['foulee'],
     terrain: row.terrain as Product['terrain'],
     amorti: row.amorti as Product['amorti'],
@@ -40,7 +43,7 @@ function mapRowToProduct(row: ShoeRow): Product {
     niveau: row.niveau as Product['niveau'],
     objectif: row.objectif as Product['objectif'],
     benefits: row.benefits,
-    image: row.image_url ?? '',
+    image: row.image_url_cdn ?? row.image_url ?? '',  // CDN Storage en priorité
   }
 }
 
@@ -59,9 +62,10 @@ export const useShoesStore = defineStore('shoes', () => {
     const { data, error } = await supabase
       .from('shoes')
       .select(
-        'id, brand, model, description, prix, foulee, terrain, amorti, drop_mm, poids_g, stabilite, dynamisme, largeur_disponible, niveau, objectif, benefits, image_url',
+        'id, brand, model, description, prix, foulee, terrain, amorti, drop_mm, poids_g, stabilite, dynamisme, largeur_disponible, niveau, objectif, benefits, image_url, image_url_cdn, offer_count_active, price_min',
       )
       .eq('is_active', true)
+      .eq('is_available', true)   // uniquement les chaussures avec au moins un lien affilié actif
       .order('brand')
 
     if (error) {

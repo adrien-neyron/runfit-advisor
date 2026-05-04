@@ -29,9 +29,15 @@ export interface ShoeAdmin {
   niveau: string[]
   objectif: string[]
   benefits: string[]
-  image_url: string | null
-  image_original_url: string | null
+  // Images — 3 colonnes legacy + 2 nouveaux champs (migration 20260427000002)
+  image_url: string | null          // URL servie (CDN Storage ou externe)
+  image_storage_path: string | null // Chemin dans bucket Storage (legacy)
+  image_original_url: string | null // URL source originale (legacy)
+  image_url_cdn: string | null      // URL CDN Supabase Storage — source de vérité
+  image_source_url: string | null   // URL de re-téléchargement source
+  last_image_check: string | null   // Dernière vérification disponibilité image
   is_active: boolean
+  is_available: boolean             // Colonne générée (offer_count_active > 0)
   created_at: string
   updated_at: string
   // Colonnes admin
@@ -65,25 +71,36 @@ export interface ShoeImage {
 export interface AffiliateLink {
   id: string
   shoe_id: string
-  merchant: 'amazon' | 'irun' | 'alltricks' | 'nike' | 'asics' | 'decathlon' | 'other'
+  merchant: string              // Plus de CHECK restrictif depuis migration 20260427000002
   country: string
-  url: string
+  url: string                   // Colonne legacy conservée
+  affiliate_url: string | null  // Alias propre de url (migration 20260427000002)
+  final_url: string | null      // URL finale après redirections
+  http_status: number | null    // Dernier code HTTP de la probe
+  status: 'active' | 'dead' | 'unknown'
   price_last_seen: number | null
   last_checked_at: string | null
-  is_active: boolean
+  is_active: boolean            // Colonne legacy conservée
   created_at: string
+  updated_at: string
 }
 
 // Résultat du pipeline image (3 variantes WebP)
 export interface ImagePipelineResult {
-  thumb: string   // 200px
-  card: string    // 600px
-  full: string    // 1200px
+  thumb: string        // URL publique 200px
+  card: string         // URL publique 600px (utilisé comme image_url_cdn)
+  full: string         // URL publique 1200px
   storagePaths: {
     thumb: string
     card: string
     full: string
   }
+}
+
+// Résultat du pipeline avec mise à jour DB incluse
+export interface ImageSaveResult extends ImagePipelineResult {
+  shoeId: string
+  sourceUrl: string
 }
 
 // Format d'une ligne dans le CSV d'import

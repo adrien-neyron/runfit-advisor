@@ -14,7 +14,13 @@
       <div class="flex items-center justify-between mb-6 flex-wrap gap-4">
         <h1 class="text-2xl font-bold">Chaussures</h1>
 
-        <div class="flex gap-2">
+        <div class="flex gap-2 items-center">
+          <NuxtLink
+            to="/admin/shoes/new"
+            class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg transition-colors"
+          >
+            + Nouvelle chaussure
+          </NuxtLink>
           <button
             v-for="f in filters"
             :key="f.value"
@@ -60,19 +66,13 @@
               <td class="px-4 py-3">
                 <div class="flex items-center gap-3">
                   <img
-                    v-if="shoe.image_url"
-                    :src="shoe.image_url"
+                    :src="shoe.image_url || '/shoe-placeholder.webp'"
                     :alt="shoe.model"
-                    class="w-10 h-10 rounded-lg object-cover bg-gray-800 flex-shrink-0"
+                    class="w-12 h-12 rounded-lg object-contain bg-gray-800 flex-shrink-0 p-1"
                     loading="lazy"
+                    @error="onImgError"
                   />
-                  <div v-else class="w-10 h-10 rounded-lg bg-gray-800 flex items-center justify-center text-gray-600 flex-shrink-0 text-xs">
-                    —
-                  </div>
-                  <div>
-                    <p class="font-medium">{{ shoe.brand }} {{ shoe.model }}</p>
-                    <p class="text-xs text-gray-500">{{ shoe.id }}</p>
-                  </div>
+                  <p class="font-medium">{{ shoe.brand }} {{ shoe.model }}</p>
                 </div>
               </td>
 
@@ -135,6 +135,14 @@
                   >
                     Éditer
                   </NuxtLink>
+                  <button
+                    @click="deactivateShoe(shoe.id)"
+                    :disabled="deactivating === shoe.id || !shoe.is_active"
+                    class="px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 text-xs font-medium rounded-lg transition-colors disabled:opacity-40"
+                    title="Désactiver"
+                  >
+                    {{ deactivating === shoe.id ? '...' : '✕' }}
+                  </button>
                 </div>
               </td>
             </tr>
@@ -164,14 +172,16 @@ type ShoeRow = {
   drop_mm: number
   poids_g: number
   image_url: string | null
+  image_url_cdn: string | null
   is_active: boolean
   is_draft: boolean
   affiliate_links: { id: string; merchant: string }[]
 }
 
 const shoes     = ref<ShoeRow[]>([])
-const loading   = ref(true)
-const validating = ref<string | null>(null)
+const loading     = ref(true)
+const validating  = ref<string | null>(null)
+const deactivating = ref<string | null>(null)
 
 // Filtre actif (depuis query param ou défaut "all")
 const activeFilter = ref((route.query.filter as string) || 'all')
@@ -198,7 +208,7 @@ onMounted(async () => {
 async function loadShoes() {
   const { data } = await supabase
     .from('shoes')
-    .select('id, brand, model, category, drop_mm, poids_g, image_url, is_active, is_draft, affiliate_links(id, merchant)')
+    .select('id, brand, model, category, drop_mm, poids_g, image_url, image_url_cdn, is_active, is_draft, affiliate_links(id, merchant)')
     .order('created_at', { ascending: false })
 
   shoes.value = (data as ShoeRow[]) || []
@@ -213,6 +223,24 @@ async function validateShoe(id: string) {
     alert(`Erreur validation : ${err.data?.statusMessage || err.message}`)
   } finally {
     validating.value = null
+  }
+}
+
+function onImgError(e: Event) {
+  (e.target as HTMLImageElement).src = '/shoe-placeholder.webp'
+}
+
+async function deactivateShoe(id: string) {
+  const shoe = shoes.value.find((s) => s.id === id)
+  if (!shoe || !confirm(`Désactiver "${shoe.brand} ${shoe.model}" ?`)) return
+  deactivating.value = id
+  try {
+    await $fetch(`/api/admin/shoes/${id}`, { method: 'DELETE' })
+    await loadShoes()
+  } catch (err: any) {
+    alert(`Erreur : ${err.data?.statusMessage || err.message}`)
+  } finally {
+    deactivating.value = null
   }
 }
 </script>
