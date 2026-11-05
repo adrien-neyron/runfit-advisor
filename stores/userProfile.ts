@@ -22,6 +22,8 @@ function toUserProfile(row: Record<string, unknown>): UserProfile {
     budget: (row.budget as string) || undefined,
     voutePlantaire: (row.voute_plantaire as string) || undefined,
     volume: (row.volume as string) || undefined,
+    healthConsent: !!row.health_consent_at,
+    healthConsentAt: (row.health_consent_at as string) || null,
   }
 }
 
@@ -63,10 +65,26 @@ export const useUserProfileStore = defineStore('userProfile', () => {
     loading.value = false
   }
 
-  // Recharge quand l'utilisateur change
-  watch(user, () => loadProfile(), { immediate: true })
+  // Recharge quand l'utilisateur change.
+  // À la déconnexion : on efface le profil de l'ancien utilisateur (mémoire + onglet) pour
+  // repartir d'un état invité vierge, sans reste de données personnelles ni de santé.
+  watch(user, (newUser, oldUser) => {
+    if (oldUser && !newUser) {
+      sessionStorage.removeItem(SESSION_KEY)
+      profile.value = null
+    }
+    loadProfile()
+  }, { immediate: true })
 
-  const saveProfile = async (p: UserProfile) => {
+  const saveProfile = async (input: UserProfile) => {
+    // Donnée de santé : sans consentement explicite, on ne conserve aucune réponse « blessures »
+    const consent = !!input.healthConsent
+    const p: UserProfile = {
+      ...input,
+      blessures: consent ? input.blessures : 'non',
+      healthConsent: consent,
+      healthConsentAt: consent ? (input.healthConsentAt ?? new Date().toISOString()) : null,
+    }
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(p))
     profile.value = p
 
@@ -89,6 +107,7 @@ export const useUserProfileStore = defineStore('userProfile', () => {
           budget: p.budget ?? null,
           voute_plantaire: p.voutePlantaire ?? null,
           volume: p.volume ?? null,
+          health_consent_at: p.healthConsentAt ?? null,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },

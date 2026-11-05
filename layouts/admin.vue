@@ -1,5 +1,9 @@
+<script setup lang="ts">
+useHead({ meta: [{ name: 'robots', content: 'noindex, nofollow' }] })
+</script>
+
 <template>
-  <div>
+  <main id="contenu">
     <slot />
-  </div>
+  </main>
 </template>

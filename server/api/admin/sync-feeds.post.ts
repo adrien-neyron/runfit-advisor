@@ -1,7 +1,9 @@
 // ============================================================
 // POST /api/admin/sync-feeds — déclenchement manuel de la sync
 // ============================================================
-// Body optionnel : { merchantSlug?: string } — sync un seul marchand
+// Body optionnel : { merchantSlug?: string, dryRun?: boolean }
+//   merchantSlug : sync un seul marchand
+//   dryRun       : simulation (rapprochements proposés, aucune écriture en base)
 // Protégé par requireAdmin (vérifie ADMIN_EMAILS)
 
 import { requireAdmin }    from '../../utils/requireAdmin'
@@ -12,7 +14,7 @@ import type { MerchantConfig } from '../../types/feed'
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)
 
-  const body = await readBody<{ merchantSlug?: string }>(event).catch(() => ({ merchantSlug: undefined }))
+  const body = await readBody<{ merchantSlug?: string; dryRun?: boolean }>(event).catch(() => ({ merchantSlug: undefined, dryRun: false }))
 
   // Sync d'un seul marchand
   if (body?.merchantSlug) {
@@ -42,7 +44,7 @@ export default defineEventHandler(async (event) => {
       lastSyncAt:       row.last_sync_at,
     }
 
-    const result = await syncMerchant(merchant)
+    const result = await syncMerchant(merchant, { dryRun: !!body.dryRun })
     return { results: [result] }
   }
 

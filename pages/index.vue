@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowRight, Zap, Target, Shield, User } from 'lucide-vue-next'
+import { ArrowRight, Zap, Target, Shield, User, PenLine } from 'lucide-vue-next'
 
 const router = useRouter()
 const user = useSupabaseUser()
@@ -17,9 +17,9 @@ const handleCTA = () => {
 }
 
 const features = [
-  { icon: Target, title: 'Analysez', desc: 'Répondez à notre questionnaire morphologique et sportif intelligent.' },
-  { icon: Zap, title: 'Matchez', desc: 'Notre algorithme analyse votre profil pour trouver la chaussure idéale.' },
-  { icon: Shield, title: 'Courez', desc: 'Recevez vos recommandations personnalisées et commandez en un clic.' },
+  { icon: Target, title: 'Analyse', desc: 'Réponds à notre questionnaire morphologique et sportif intelligent.' },
+  { icon: Zap, title: 'Matche', desc: 'Notre algorithme analyse ton profil pour trouver la chaussure idéale.' },
+  { icon: Shield, title: 'Cours', desc: 'Reçois tes recommandations personnalisées et commande en un clic.' },
 ]
 
 interface BlogPost {
@@ -39,6 +39,11 @@ function formatDate(d: string | null) {
   if (!d) return ''
   return new Date(d).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
 }
+
+useSeoMeta({
+  title: 'RunMatch — Trouve ta chaussure de running idéale',
+  description: 'Réponds à quelques questions, swipe les modèles : RunMatch te recommande la chaussure de running adaptée à ton profil, avec les meilleures offres.',
+})
 </script>
 
 <template>
@@ -54,7 +59,7 @@ function formatDate(d: string | null) {
         </span>
         <div class="flex items-center gap-2">
           <template v-if="user">
-            <UiButton variant="ghost" size="sm" @click="router.push('/profil')">
+            <UiButton variant="ghost" size="sm" to="/profil">
               <User class="w-4 h-4" />
               Mon profil
             </UiButton>
@@ -63,7 +68,7 @@ function formatDate(d: string | null) {
             </UiButton>
           </template>
           <template v-else>
-            <UiButton variant="ghost" size="sm" @click="router.push('/connexion')">
+            <UiButton variant="ghost" size="sm" to="/connexion">
               <User class="w-4 h-4" />
               Connexion
             </UiButton>
@@ -152,7 +157,7 @@ function formatDate(d: string | null) {
             class="text-center mb-16"
           >
             <h2 class="text-3xl md:text-4xl font-black tracking-tight">Le blog RunMatch</h2>
-            <p class="text-muted-foreground mt-3 max-w-lg mx-auto">Conseils, comparatifs et guides pour bien choisir vos chaussures de running.</p>
+            <p class="text-muted-foreground mt-3 max-w-lg mx-auto">Conseils, comparatifs et guides pour bien choisir tes chaussures de running.</p>
           </div>
 
           <div v-if="blogPosts.length" class="grid md:grid-cols-3 gap-6">
@@ -174,17 +179,17 @@ function formatDate(d: string | null) {
                   :alt="post.title"
                   class="w-full h-full"
                 />
-                <div v-else class="w-full h-full flex items-center justify-center text-4xl">✍️</div>
+                <div v-else class="w-full h-full flex items-center justify-center bg-secondary"><PenLine class="w-9 h-9 text-muted-foreground" aria-hidden="true" /></div>
               </div>
               <div class="p-5 space-y-2">
                 <div class="flex flex-wrap gap-1.5 mb-1">
                   <span
                     v-for="tag in post.tags.slice(0, 2)"
                     :key="tag"
-                    class="text-[10px] px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-400 font-medium"
+                    class="text-xs px-2 py-0.5 rounded-full bg-orange-500/10 text-orange-700 dark:text-orange-400 font-medium"
                   >{{ tag }}</span>
                 </div>
-                <h3 class="font-bold text-base leading-snug group-hover:text-orange-400 transition-colors line-clamp-2">
+                <h3 class="font-bold text-base leading-snug group-hover:text-orange-700 dark:group-hover:text-orange-400 transition-colors line-clamp-2">
                   {{ post.title }}
                 </h3>
                 <p class="text-sm text-muted-foreground line-clamp-2">{{ post.excerpt }}</p>

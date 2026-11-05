@@ -9,7 +9,7 @@ useHead({
     {
       name: 'description',
       content:
-        'RunMatch est un outil gratuit qui analyse votre profil de coureur pour vous recommander la chaussure de running la plus adaptée à votre foulée et vos objectifs.',
+        'RunMatch est un outil gratuit qui analyse ton profil de coureur pour te recommander la chaussure de running la plus adaptée à ta foulée et tes objectifs.',
     },
   ],
 })
@@ -18,7 +18,7 @@ const values = [
   {
     icon: Target,
     title: 'Personnalisation réelle',
-    desc: "Pas de liste générique. L'algorithme croise votre foulée, votre morphologie, votre terrain et vos objectifs pour une recommandation unique.",
+    desc: "Pas de liste générique. L'algorithme croise ta foulée, ta morphologie, ton terrain et tes objectifs pour une recommandation unique.",
   },
   {
     icon: Zap,
@@ -28,7 +28,7 @@ const values = [
   {
     icon: Shield,
     title: 'Indépendant et transparent',
-    desc: "Les recommandations ne sont pas influencées par les marges d'affiliation. La meilleure chaussure pour vous passe toujours en premier.",
+    desc: "Les recommandations ne sont pas influencées par les marges d'affiliation. La meilleure chaussure pour toi passe toujours en premier.",
   },
   {
     icon: Heart,
@@ -42,7 +42,7 @@ const values = [
   <div class="min-h-screen bg-background">
     <div class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div class="container flex items-center h-16">
-        <UiButton variant="ghost" size="icon" aria-label="Retour" @click="router.push('/')">
+        <UiButton variant="ghost" size="icon" aria-label="Retour" to="/">
           <ArrowLeft class="w-5 h-5" />
         </UiButton>
         <span class="ml-4 font-black tracking-tighter">
@@ -58,18 +58,18 @@ const values = [
         :initial="{ opacity: 0, y: 16 }"
         :enter="{ opacity: 1, y: 0, transition: { duration: 400 } }"
       >
-        <p class="text-xs text-primary font-bold uppercase tracking-widest mb-3">Notre mission</p>
+        <p class="text-xs text-brand font-bold uppercase tracking-widest mb-3">Notre mission</p>
         <h1 class="text-4xl font-black tracking-tight leading-tight">
           Trouver la bonne chaussure<br />ne devrait pas être un casse-tête.
         </h1>
         <p class="text-muted-foreground leading-relaxed mt-5 text-[15px]">
           Les magasins de running proposent des dizaines de modèles, les sites comparateurs affichent
-          des centaines de critères techniques, et au final vous repartez avec celle qui avait la meilleure
-          promo — pas forcément la meilleure pour votre pied.
+          des centaines de critères techniques, et au final tu repars avec celle qui avait la meilleure
+          promo — pas forcément la meilleure pour ton pied.
         </p>
         <p class="text-muted-foreground leading-relaxed mt-3 text-[15px]">
-          RunMatch prend le problème à l'envers : on part de <strong class="text-foreground">vous</strong>
-          — votre foulée, votre morphologie, votre terrain, vos objectifs — pour remonter vers la chaussure.
+          RunMatch prend le problème à l'envers : on part de <strong class="text-foreground">toi</strong>
+          — ta foulée, ta morphologie, ton terrain, tes objectifs — pour remonter vers la chaussure.
           Comme un bon conseiller en magasin, en 2 minutes.
         </p>
       </section>
@@ -101,17 +101,17 @@ const values = [
         <p class="text-muted-foreground text-sm leading-relaxed">
           RunMatch est un projet indépendant. Le service est entièrement gratuit pour les coureurs
           et est financé par des <strong class="text-foreground">commissions d'affiliation</strong> :
-          lorsque vous cliquez sur un lien marchand et réalisez un achat, RunMatch perçoit une
-          petite commission sans surcoût pour vous.
+          lorsque tu cliques sur un lien marchand et réalises un achat, RunMatch perçoit une
+          petite commission sans surcoût pour toi.
         </p>
         <p class="text-muted-foreground text-sm leading-relaxed">
           Nous participons aux programmes Amazon Partenaires et AWIN. Cette relation commerciale
           n'influence en aucun cas l'ordre des recommandations, qui repose uniquement sur la
-          compatibilité avec votre profil biomécanique.
+          compatibilité avec ton profil biomécanique.
         </p>
         <NuxtLink
           to="/mentions-legales#affiliation"
-          class="text-primary text-sm font-semibold hover:underline underline-offset-4"
+          class="text-brand text-sm font-semibold hover:underline underline-offset-4"
         >
           En savoir plus sur notre politique d'affiliation →
         </NuxtLink>
@@ -123,7 +123,7 @@ const values = [
         <p class="text-muted-foreground text-sm">
           On est toujours ouverts aux retours coureurs, aux partenariats marchands et aux demandes presse.
         </p>
-        <UiButton variant="hero" @click="router.push('/contact')">
+        <UiButton variant="hero" to="/contact">
           Nous contacter
         </UiButton>
       </section>

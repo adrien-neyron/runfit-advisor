@@ -197,7 +197,8 @@ export function useMerchants() {
     shoeId: string,
     merchant: string,
     country = 'FR',
-  ): string => `/api/affiliate/${merchant.toLowerCase()}/${shoeId}?country=${country}`
+  ): string =>
+    `/api/affiliate/${encodeURIComponent(merchant.toLowerCase())}/${encodeURIComponent(shoeId)}?country=${country}`
 
   return {
     fetchMerchantOffers,

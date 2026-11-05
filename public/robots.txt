@@ -1,14 +1,12 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
-
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /admin/
+Disallow: /profil
+Disallow: /swipe
+Disallow: /matches
+Disallow: /resultats
+Disallow: /questionnaire
+Disallow: /connexion
+Disallow: /mot-de-passe
+Disallow: /confirm

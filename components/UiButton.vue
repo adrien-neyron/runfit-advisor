@@ -5,6 +5,8 @@ interface Props {
   disabled?: boolean
   type?: 'button' | 'submit' | 'reset'
   class?: string
+  /** Destination interne : le composant devient un vrai lien (<a>) — à utiliser pour toute navigation */
+  to?: string
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -16,10 +18,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{ click: [e: MouseEvent] }>()
 
+// Un bouton désactivé reste un <button disabled> même s'il a une destination
+const asLink = computed(() => !!props.to && !props.disabled)
+
 const variantClasses = computed(() => {
   switch (props.variant) {
     case 'hero':
-      return 'accent-gradient text-white hover:opacity-90 shadow-md'
+      return 'accent-gradient text-primary-foreground hover:opacity-90 shadow-md'
     case 'outline':
       return 'border-2 border-border bg-background hover:bg-secondary text-foreground'
     case 'ghost':
@@ -48,7 +53,17 @@ const sizeClasses = computed(() => {
 </script>
 
 <template>
+  <NuxtLink
+    v-if="asLink"
+    :to="to"
+    class="inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+    :class="[variantClasses, sizeClasses, props.class]"
+    @click="emit('click', $event)"
+  >
+    <slot />
+  </NuxtLink>
   <button
+    v-else
     :type="type"
     :disabled="disabled"
     class="inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:pointer-events-none active:scale-95"

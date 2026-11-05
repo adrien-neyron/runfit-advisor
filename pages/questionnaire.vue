@@ -7,6 +7,12 @@ const modalOpen = ref(true)
 const handleClose = () => {
   router.push('/')
 }
+
+useSeoMeta({
+  title: 'Questionnaire — RunMatch',
+  description: 'Réponds à quelques questions pour trouver ta chaussure de running.',
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>

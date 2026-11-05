@@ -1,28 +1,31 @@
 <script setup lang="ts">
 import { ArrowLeft, Heart, Trash2, Sparkles, UserPlus, LogIn, ExternalLink } from 'lucide-vue-next'
 import { shoes } from '~/data/shoes'
-import type { BestOffer } from '~/composables/useMerchants'
+import type { ShoeOffer } from '~/composables/useShoeOffers'
 
 const router       = useRouter()
 const matchesStore = useMatchesStore()
 const shoesStore   = useShoesStore()
-const { fetchBestOffers, buildAffiliateRedirectUrl } = useMerchants()
+const { fetchOffers, bestOf, withSrc } = useShoeOffers()
 
-const bestOffers = ref<Map<string, BestOffer>>(new Map())
-const redirect   = ref<{ merchant: string; url: string; shoeId: string; model: string } | null>(null)
+const bestOffers = ref<Map<string, ShoeOffer>>(new Map())
+// Une offre par marchand : un modèle vendu chez deux marchands affiche les deux
+const allOffers = ref<Map<string, ShoeOffer[]>>(new Map())
 
 onMounted(async () => {
   await shoesStore.fetchShoes()
 
-  // Charge les meilleures offres pour toutes les chaussures matchées en une requête
+  // Offres directes pour toutes les chaussures matchées, en une requête
   const ids = matchesStore.likedShoes.map((m) => m.shoeId)
   if (ids.length) {
-    const labels = new Map(
-      matchedShoes.value
-        .filter(Boolean)
-        .map((s) => [s!.id, `${s!.brand} ${s!.model}`])
+    const offers = await fetchOffers(ids)
+    allOffers.value = new Map(ids.flatMap((id) => (offers.get(id)?.length ? [[id, offers.get(id)!] as [string, ShoeOffer[]]] : [])))
+    bestOffers.value = new Map(
+      ids.flatMap((id) => {
+        const best = bestOf(offers.get(id))
+        return best ? [[id, best] as [string, ShoeOffer]] : []
+      }),
     )
-    bestOffers.value = await fetchBestOffers(ids, labels)
   }
 })
 
@@ -36,61 +39,40 @@ const matchedShoes = computed(() =>
       const dbProduct = shoesStore.dbProducts.find((s) => s.id === m.shoeId)
       return {
         ...shoe,
-        image: dbProduct?.image || shoe.image,
+        // Photo du marchand (variante exacte du lien) en priorité, puis catalogue
+        image: bestOffers.value.get(m.shoeId)?.imageUrl || (dbProduct ? dbProduct.image : shoe.image),
         prix: dbProduct?.prix ?? shoe.prix,  // prix temps réel si dispo
       }
     })
     .filter(Boolean),
 )
 
-const handleBuy = (shoeId: string, model: string) => {
-  const offer = bestOffers.value.get(shoeId)
-  if (!offer) {
-    const shoe = matchedShoes.value.find((s) => s!.id === shoeId)
-    router.push(`/shoes/${shoe?.slug ?? shoeId}`)
-    return
-  }
-  // URL de l'endpoint serveur : tracking + tag affilié garantis
-  const url = buildAffiliateRedirectUrl(shoeId, offer.merchant)
-  redirect.value = { merchant: offer.merchant, url, shoeId, model }
+
+// Sans offre directe : on renvoie vers la fiche du modèle
+const goToShoe = (shoeId: string) => {
+  const shoe = matchedShoes.value.find((s) => s!.id === shoeId)
+  router.push(`/shoes/${shoe?.slug ?? shoeId}`)
 }
 
-const confirmRedirect = () => {
-  if (!redirect.value) return
-  // Tracking géré côté serveur dans /api/affiliate/:merchant/:shoeId
-  window.open(redirect.value.url, '_blank', 'noopener,noreferrer')
-  redirect.value = null
-}
+useSeoMeta({
+  title: 'Mes matchs — RunMatch',
+  description: 'Les chaussures de running que tu as aimées, avec un lien direct vers le marchand.',
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>
   <div class="min-h-screen bg-background">
 
-    <!-- Dialog de redirection -->
-    <Teleport v-if="redirect" to="body">
-      <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="redirect = null" />
-        <div class="relative bg-card rounded-2xl shadow-2xl p-6 max-w-sm w-full z-10">
-          <h3 class="font-black text-lg mb-2">Redirection vers {{ redirect.merchant }}</h3>
-          <p class="text-sm text-muted-foreground mb-5">
-            Vous allez être redirigé vers le site partenaire pour finaliser votre achat.
-          </p>
-          <div class="flex gap-3">
-            <UiButton variant="outline" class="flex-1" @click="redirect = null">Annuler</UiButton>
-            <UiButton variant="hero" class="flex-1" @click="confirmRedirect">Continuer</UiButton>
-          </div>
-        </div>
-      </div>
-    </Teleport>
     <!-- Nav -->
     <div class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div class="container flex items-center justify-between h-14 max-w-2xl">
-        <UiButton variant="ghost" size="icon" aria-label="Retour" @click="router.push('/')">
+        <UiButton variant="ghost" size="icon" aria-label="Retour" to="/">
           <ArrowLeft class="w-5 h-5" />
         </UiButton>
 
         <span class="font-black tracking-tighter text-sm">
-          Mes <span class="text-gradient">Matchs</span>
+          Mes <span class="text-gradient">matchs</span>
         </span>
 
         <UiButton
@@ -118,7 +100,7 @@ const confirmRedirect = () => {
       >
         <div class="flex items-start gap-3">
           <div class="w-9 h-9 rounded-xl bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
-            <UserPlus class="w-4.5 h-4.5 text-primary" />
+            <UserPlus class="w-4.5 h-4.5 text-brand" />
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-black leading-tight">
@@ -129,11 +111,11 @@ const confirmRedirect = () => {
               Crée un compte gratuit pour les retrouver sur n'importe quel appareil.
             </p>
             <div class="flex gap-2 mt-3">
-              <UiButton size="sm" variant="hero" class="gap-1.5" @click="router.push('/connexion?signup=1')">
+              <UiButton size="sm" variant="hero" class="gap-1.5" to="/connexion?signup=1">
                 <UserPlus class="w-3.5 h-3.5" />
                 Créer un compte
               </UiButton>
-              <UiButton size="sm" variant="outline" class="gap-1.5" @click="router.push('/connexion')">
+              <UiButton size="sm" variant="outline" class="gap-1.5" to="/connexion">
                 <LogIn class="w-3.5 h-3.5" />
                 Se connecter
               </UiButton>
@@ -153,9 +135,9 @@ const confirmRedirect = () => {
         <Heart class="w-16 h-16 text-muted-foreground/25" :stroke-width="1.5" />
         <h1 class="text-2xl font-black tracking-tight">Aucun match pour l'instant</h1>
         <p class="text-muted-foreground text-sm max-w-xs">
-          Swipez des chaussures et retrouvez vos coups de cœur ici pour les comparer et acheter.
+          Swipe des chaussures et retrouve tes coups de cœur ici pour les comparer et acheter.
         </p>
-        <UiButton variant="hero" class="gap-2 mt-2" @click="router.push('/swipe')">
+        <UiButton variant="hero" class="gap-2 mt-2" to="/swipe">
           <Sparkles class="w-4 h-4" />
           Découvrir des chaussures
         </UiButton>
@@ -174,7 +156,7 @@ const confirmRedirect = () => {
             matchée{{ matchedShoes.length !== 1 ? 's' : '' }}
           </h1>
           <p class="text-muted-foreground text-sm mt-1">
-            Appuyez sur une carte pour voir les détails et les acheter
+            Ouvre la fiche pour comparer les offres, ou va directement chez le marchand
           </p>
         </div>
 
@@ -189,25 +171,25 @@ const confirmRedirect = () => {
             class="bg-card rounded-2xl border border-border overflow-hidden group hover:shadow-xl hover:border-primary/30 transition-all duration-200"
             :aria-label="`${shoe!.brand} ${shoe!.model}`"
           >
-            <div class="aspect-square bg-gradient-to-br from-secondary/80 to-secondary/30 overflow-hidden relative">
+            <div class="aspect-square bg-white overflow-hidden relative">
               <ShoeImage
                 :src="shoe!.image"
                 :alt="`${shoe!.brand} ${shoe!.model}`"
-                class="w-full h-full object-contain p-5 group-hover:scale-105 transition-transform duration-300 mix-blend-multiply dark:mix-blend-normal"
+                class="w-full h-full object-contain p-5 group-hover:scale-105 transition-transform duration-300 mix-blend-multiply [filter:brightness(1.04)_contrast(1.03)]"
                 loading="lazy"
               />
             </div>
             <div class="p-3 flex flex-col gap-2">
               <div>
-                <p class="text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                <p class="text-xs text-muted-foreground font-medium uppercase tracking-wider">
                   {{ shoe!.brand }}
                 </p>
                 <h3 class="text-sm font-black leading-tight line-clamp-2 mt-0.5">{{ shoe!.model }}</h3>
               </div>
 
               <!-- Marchand disponible -->
-              <p v-if="bestOffers.get(shoe!.id)" class="text-xs text-muted-foreground">
-                Disponible chez {{ bestOffers.get(shoe!.id)!.merchant }}
+              <p v-if="allOffers.get(shoe!.id)?.length" class="text-xs text-muted-foreground">
+                Disponible chez {{ allOffers.get(shoe!.id)!.map((o) => o.merchantName).join(' et ') }}
               </p>
 
               <!-- Tags -->
@@ -215,34 +197,49 @@ const confirmRedirect = () => {
                 <span
                   v-for="tag in shoe!.tags.slice(0, 2)"
                   :key="tag"
-                  class="text-[9px] px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground capitalize font-medium"
+                  class="text-xs px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground capitalize font-medium"
                 >
                   {{ tag }}
                 </span>
               </div>
 
-              <!-- Bouton achat -->
-              <button
-                class="w-full mt-1 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                @click.stop="handleBuy(shoe!.id, shoe!.model)"
+              <!-- Lien d'achat direct (tracking + attribution côté serveur) -->
+              <a
+                v-for="(offer, k) in allOffers.get(shoe!.id) ?? []"
+                :key="offer.merchantSlug"
+                :href="withSrc(offer.redirectUrl, 'matches')"
+                target="_blank"
+                rel="nofollow sponsored noopener noreferrer"
+                class="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                :class="k === 0 ? 'mt-1 bg-primary text-primary-foreground hover:bg-primary/90' : 'border-2 border-border hover:bg-secondary'"
+                :aria-label="`Voir l'offre chez ${offer.merchantName} pour ${shoe!.brand} ${shoe!.model} (s'ouvre dans un nouvel onglet)`"
               >
-                <ExternalLink class="w-3 h-3" />
-                Voir le meilleur prix
-              </button>
+                <ExternalLink class="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span class="truncate">Voir chez {{ offer.merchantName }}</span>
+              </a>
+              <!-- Fiche détaillée : toujours accessible, avec ou sans offre -->
+              <NuxtLink
+                :to="`/shoes/${shoe!.slug ?? shoe!.id}`"
+                class="w-full flex items-center justify-center rounded-xl py-2.5 text-xs font-black border-2 border-border hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                :class="allOffers.get(shoe!.id)?.length ? '' : 'mt-1'"
+                :aria-label="`Voir la fiche de ${shoe!.brand} ${shoe!.model}`"
+              >
+                Voir la fiche
+              </NuxtLink>
             </div>
           </article>
         </div>
 
         <!-- Mention légale affiliés (obligatoire Amazon Associates) -->
-        <AffiliateDisclosure class="mt-6" />
+        <AffiliateDisclosure class="mt-6" :offers="[...allOffers.values()].flat()" />
 
         <!-- Footer CTA -->
         <div class="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-          <UiButton variant="hero" class="gap-2" @click="router.push('/swipe')">
+          <UiButton variant="hero" class="gap-2" to="/swipe">
             <Sparkles class="w-4 h-4" />
             Swiper plus de chaussures
           </UiButton>
-          <UiButton variant="outline" @click="router.push('/resultats')">
+          <UiButton variant="outline" to="/resultats">
             Voir les recommandations
           </UiButton>
         </div>

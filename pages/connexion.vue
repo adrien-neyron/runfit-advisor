@@ -1,26 +1,71 @@
 <script setup lang="ts">
-import { Mail, Lock, Eye, EyeOff } from 'lucide-vue-next'
+import { Mail, MailCheck, Lock, Eye, EyeOff } from 'lucide-vue-next'
 
 const router = useRouter()
+const route = useRoute()
 const user = useSupabaseUser()
 const authStore = useAuthStore()
-const { toast } = useToast()
 
 // Redirige si déjà connecté
 watchEffect(() => {
   if (user.value) router.push('/profil')
 })
 
-const mode = ref<'login' | 'signup'>('login')
+// ?signup=1 (lien depuis « Mes matchs ») ouvre directement l'inscription
+const mode = ref<'login' | 'signup' | 'reset'>(route.query.signup ? 'signup' : 'login')
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
+const info = ref('')
+
+// Confirmation d'inscription : écran persistant (et non un toast éphémère)
+const signupSent = ref(false)
+const confirmTitle = ref<HTMLElement | null>(null)
+const resending = ref(false)
+const resendInfo = ref('')
+
+const handleResend = async () => {
+  resending.value = true
+  resendInfo.value = ''
+  const { error: resendError } = await authStore.resendConfirmation(email.value)
+  resending.value = false
+  resendInfo.value = resendError
+    ? 'Impossible de renvoyer l\'email pour le moment. Réessaie dans quelques minutes.'
+    : 'Email renvoyé. Pense à vérifier tes courriers indésirables.'
+}
+
+const editSignupEmail = () => {
+  signupSent.value = false
+  resendInfo.value = ''
+}
+
+const switchMode = (next: 'login' | 'signup' | 'reset') => {
+  mode.value = next
+  error.value = ''
+  info.value = ''
+}
+
+// Mot de passe oublié : message identique que le compte existe ou non (pas de fuite d'information)
+const handleReset = async () => {
+  if (!email.value) {
+    error.value = 'Saisis ton adresse email.'
+    return
+  }
+  loading.value = true
+  error.value = ''
+  info.value = ''
+  await authStore.resetPassword(email.value)
+  loading.value = false
+  info.value = 'Si un compte existe avec cet email, tu vas recevoir un lien pour choisir un nouveau mot de passe.'
+}
 
 const handleSubmit = async () => {
+  if (mode.value === 'reset') return handleReset()
+
   if (!email.value || !password.value) {
-    error.value = 'Veuillez remplir tous les champs.'
+    error.value = 'Remplis tous les champs.'
     return
   }
 
@@ -43,13 +88,17 @@ const handleSubmit = async () => {
       error.value = result.error.message ?? 'Une erreur est survenue.'
     }
   } else if (mode.value === 'signup') {
-    toast({
-      title: 'Compte créé !',
-      description: 'Vérifiez votre email pour confirmer votre compte.',
-      type: 'success',
-    })
+    signupSent.value = true
+    await nextTick()
+    confirmTitle.value?.focus()
   }
 }
+
+useSeoMeta({
+  title: 'Connexion — RunMatch',
+  description: 'Connecte-toi pour retrouver ton profil et tes matchs.',
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>
@@ -61,16 +110,43 @@ const handleSubmit = async () => {
       :enter="{ opacity: 1, y: 0 }"
       class="w-full max-w-sm"
     >
+      <!-- Confirmation d'inscription -->
+      <div v-if="signupSent" class="text-center space-y-4" data-id="signup-confirmation">
+        <NuxtLink to="/" class="text-2xl font-black tracking-tighter">
+          RUN<span class="text-gradient">MATCH</span>
+        </NuxtLink>
+        <MailCheck class="w-12 h-12 mx-auto text-brand mt-4" aria-hidden="true" />
+        <h1 ref="confirmTitle" tabindex="-1" class="text-xl font-black focus:outline-none">Vérifie ta boîte mail</h1>
+        <p class="text-sm text-muted-foreground">
+          Nous avons envoyé un lien de confirmation à <strong class="text-foreground">{{ email }}</strong>.
+          Clique dessus pour activer ton compte. Pense à vérifier tes courriers indésirables.
+        </p>
+        <p v-if="resendInfo" role="status" class="text-sm font-medium rounded-xl bg-secondary p-3">{{ resendInfo }}</p>
+        <div class="flex flex-col gap-2 pt-2">
+          <UiButton variant="outline" size="lg" :disabled="resending" :aria-busy="resending" @click="handleResend">
+            Renvoyer l'email
+          </UiButton>
+          <button
+            type="button"
+            class="text-sm text-brand font-semibold hover:underline rounded py-2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            @click="editSignupEmail"
+          >
+            Modifier l'adresse email
+          </button>
+        </div>
+      </div>
+
+      <template v-else>
       <!-- Brand -->
       <div class="text-center mb-8">
         <NuxtLink to="/" class="text-2xl font-black tracking-tighter">
           RUN<span class="text-gradient">MATCH</span>
         </NuxtLink>
         <h1 class="text-xl font-black mt-4">
-          {{ mode === 'login' ? 'Connexion' : 'Créer un compte' }}
+          {{ mode === 'login' ? 'Connexion' : mode === 'signup' ? 'Créer un compte' : 'Mot de passe oublié' }}
         </h1>
         <p class="text-sm text-muted-foreground mt-1">
-          {{ mode === 'login' ? 'Bon retour parmi nous !' : 'Rejoignez RunMatch gratuitement' }}
+          {{ mode === 'login' ? 'Bon retour parmi nous !' : mode === 'signup' ? 'Rejoins RunMatch gratuitement' : 'Saisis ton email, on t\'envoie un lien pour en choisir un nouveau.' }}
         </p>
       </div>
 
@@ -80,62 +156,94 @@ const handleSubmit = async () => {
         <div class="space-y-1.5">
           <label for="email" class="text-sm font-medium">Email</label>
           <div class="relative">
-            <Mail class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Mail class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
             <input
               id="email"
               v-model="email"
               type="email"
               autocomplete="email"
               required
-              placeholder="vous@exemple.fr"
+              :aria-invalid="error ? 'true' : undefined"
+              :aria-describedby="error ? 'auth-error' : undefined"
+              placeholder="toi@exemple.fr"
               class="w-full h-10 pl-9 pr-4 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
         </div>
 
         <!-- Mot de passe -->
-        <div class="space-y-1.5">
+        <div v-if="mode !== 'reset'" class="space-y-1.5">
           <label for="password" class="text-sm font-medium">Mot de passe</label>
           <div class="relative">
-            <Lock class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Lock class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
             <input
               id="password"
               v-model="password"
               :type="showPassword ? 'text' : 'password'"
               :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
               required
+              :aria-invalid="error ? 'true' : undefined"
+              :aria-describedby="error ? 'auth-error' : undefined"
               placeholder="••••••••"
-              class="w-full h-10 pl-9 pr-10 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+              class="w-full h-10 pl-9 pr-11 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
             <button
               type="button"
-              class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              class="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+              :aria-label="showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'"
+              :aria-pressed="showPassword"
               @click="showPassword = !showPassword"
             >
-              <EyeOff v-if="showPassword" class="w-4 h-4" />
-              <Eye v-else class="w-4 h-4" />
+              <EyeOff v-if="showPassword" class="w-4 h-4" aria-hidden="true" />
+              <Eye v-else class="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
         </div>
 
-        <!-- Erreur -->
-        <p v-if="error" class="text-sm text-destructive font-medium">{{ error }}</p>
+        <div v-if="mode === 'login'" class="text-right -mt-2">
+          <button
+            type="button"
+            class="text-sm text-brand font-medium hover:underline rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            @click="switchMode('reset')"
+          >
+            Mot de passe oublié ?
+          </button>
+        </div>
+
+        <!-- Confirmation d'envoi du lien (annoncée aux lecteurs d'écran) -->
+        <p v-if="info" role="status" class="text-sm font-medium rounded-xl bg-secondary p-3">{{ info }}</p>
+
+        <!-- Erreur : annoncée aux lecteurs d'écran dès son apparition -->
+        <p v-if="error" id="auth-error" role="alert" class="text-sm text-destructive font-medium">{{ error }}</p>
 
         <!-- Soumettre -->
-        <UiButton type="submit" variant="hero" size="lg" class="w-full" :disabled="loading">
-          <span v-if="loading" class="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-          <span v-else>{{ mode === 'login' ? 'Se connecter' : 'Créer mon compte' }}</span>
+        <UiButton type="submit" variant="hero" size="lg" class="w-full" :disabled="loading" :aria-busy="loading">
+          <template v-if="loading">
+            <span class="w-4 h-4 rounded-full border-2 border-current/30 border-t-current animate-spin" aria-hidden="true" />
+            <span class="sr-only">Connexion en cours…</span>
+          </template>
+          <span v-else>{{ mode === 'login' ? 'Se connecter' : mode === 'signup' ? 'Créer mon compte' : 'Envoyer le lien' }}</span>
         </UiButton>
       </form>
 
-      <!-- Switcher login/signup -->
-      <p class="text-center text-sm text-muted-foreground mt-6">
+      <!-- Basculer connexion / inscription / retour -->
+      <p v-if="mode !== 'reset'" class="text-center text-sm text-muted-foreground mt-6">
         {{ mode === 'login' ? 'Pas encore de compte ?' : 'Déjà un compte ?' }}
         <button
-          class="text-primary font-semibold hover:underline ml-1"
-          @click="mode = mode === 'login' ? 'signup' : 'login'; error = ''"
+          type="button"
+          class="text-brand font-semibold hover:underline ml-1 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          @click="switchMode(mode === 'login' ? 'signup' : 'login')"
         >
           {{ mode === 'login' ? 'S\'inscrire' : 'Se connecter' }}
+        </button>
+      </p>
+      <p v-else class="text-center text-sm mt-6">
+        <button
+          type="button"
+          class="text-brand font-semibold hover:underline rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+          @click="switchMode('login')"
+        >
+          Retour à la connexion
         </button>
       </p>
 
@@ -144,6 +252,7 @@ const handleSubmit = async () => {
           ← Retour à l'accueil
         </NuxtLink>
       </div>
+      </template>
     </div>
   </div>
 </template>

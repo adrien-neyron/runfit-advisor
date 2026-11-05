@@ -35,14 +35,14 @@ function refuse() {
           <!-- Texte -->
           <div class="flex-1 min-w-0">
             <p class="text-sm font-semibold leading-snug">
-              🍪 Ce site utilise des cookies
+              Ce site utilise des cookies
             </p>
             <p class="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Nous utilisons des cookies fonctionnels pour l'authentification et la sauvegarde de tes préférences.
+              Nous utilisons des cookies fonctionnels pour l'authentification et la sauvegarde de vos préférences.
               Aucun cookie publicitaire ou de pistage tiers.
               <NuxtLink
                 to="/confidentialite"
-                class="underline hover:text-primary transition-colors"
+                class="underline hover:text-brand transition-colors"
               >
                 En savoir plus
               </NuxtLink>

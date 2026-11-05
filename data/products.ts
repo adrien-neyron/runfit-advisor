@@ -33,7 +33,7 @@ export const products: Product[] = [
     poids: 272,
     prix: 139.99,
     image: "",
-    description: "La chaussure polyvalente par excellence. Le Pegasus 42 offre un amorti React réactif pour vos courses quotidiennes, du fractionné au footing long.",
+    description: "La chaussure polyvalente par excellence. Le Pegasus 42 offre un amorti React réactif pour tes courses quotidiennes, du fractionné au footing long.",
     benefits: ["Amorti React", "Polyvalence", "Durabilité", "Confort longue distance"],
     niveau: ["débutant", "intermédiaire", "avancé"],
     objectif: ["confort", "performance"],
@@ -52,7 +52,7 @@ export const products: Product[] = [
     poids: 295,
     prix: 149.99,
     image: "",
-    description: "Stabilité et confort pour les pronateurs. Le système de support LITETRUSS guide votre foulée naturellement sur de longues distances.",
+    description: "Stabilité et confort pour les pronateurs. Le système de support LITETRUSS guide ta foulée naturellement sur de longues distances.",
     benefits: ["Support pronation", "Gel Cushioning", "Stabilité renforcée", "Respirabilité"],
     niveau: ["débutant", "intermédiaire"],
     objectif: ["confort", "prévention"],
@@ -391,7 +391,7 @@ export const products: Product[] = [
     poids: 220,
     prix: 249.99,
     image: "https://assets.adidas.com/images/h_840,f_auto,q_auto,fl_lossy,c_fill,g_auto/adizero-adios-pro-3-shoes/adidas-adizero-adios-pro-3-m-01-standard.jpg",
-    description: "La machine à records d'Adidas. 5 tiges en carbone EnergyRods et la mousse LIGHTSTRIKE Pro pour des courses de compétition au sommet de votre potentiel.",
+    description: "La machine à records d'Adidas. 5 tiges en carbone EnergyRods et la mousse LIGHTSTRIKE Pro pour des courses de compétition au sommet de ton potentiel.",
     benefits: ["EnergyRods carbone", "LIGHTSTRIKE Pro", "Légende marathon", "Retour énergie élite"],
     niveau: ["avancé"],
     objectif: ["performance"],
@@ -494,7 +494,7 @@ export const products: Product[] = [
     poids: 266,
     prix: 149.99,
     image: "",
-    description: "L'amorti généreux pour les longues sorties. La Gel-Cumulus 28 combine FF BLAST+ et Gel Technology pour une foulée douce et rassurante sur tous vos entraînements.",
+    description: "L'amorti généreux pour les longues sorties. La Gel-Cumulus 28 combine FF BLAST+ et Gel Technology pour une foulée douce et rassurante sur tous tes entraînements.",
     benefits: ["FF BLAST+ Foam", "Gel Technology", "Engineered Knit", "Confort longue distance"],
     niveau: ["débutant", "intermédiaire", "avancé"],
     objectif: ["confort", "prévention"],
@@ -532,7 +532,7 @@ export const products: Product[] = [
     poids: 248,
     prix: 109.99,
     image: "",
-    description: "Légèreté et réactivité pour vos séances au quotidien. La Launch 12 est la chaussure de training polyvalente Brooks pour les runners qui cherchent vitesse et confort à prix accessible.",
+    description: "Légèreté et réactivité pour tes séances au quotidien. La Launch 12 est la chaussure de training polyvalente Brooks pour les runners qui cherchent vitesse et confort à prix accessible.",
     benefits: ["BioMoGo DNA", "Légèreté 248g", "Bon rapport qualité/prix", "Réactivité"],
     niveau: ["débutant", "intermédiaire", "avancé"],
     objectif: ["confort", "performance"],
@@ -551,7 +551,7 @@ export const products: Product[] = [
     poids: 278,
     prix: 139.99,
     image: "https://img.therunningcollective.fr/new-balance-880v13-m-1160x725.webp",
-    description: "La polyvalente fiable de New Balance. Fresh Foam X offre un amorti confortable et une transition naturelle pour vos entraînements quotidiens.",
+    description: "La polyvalente fiable de New Balance. Fresh Foam X offre un amorti confortable et une transition naturelle pour tes entraînements quotidiens.",
     benefits: ["Fresh Foam X", "Upper respirant", "Durabilité", "Polyvalence"],
     niveau: ["débutant", "intermédiaire", "avancé"],
     objectif: ["confort"],
@@ -787,7 +787,7 @@ export const products: Product[] = [
     poids: 220,
     prix: 299.99,
     image: "https://img.therunningcollective.fr/nike-alphafly-3-m-1160x725.webp",
-    description: "La chaussure record de Nike. L'Alphafly 3 cumule double plaque carbone, Air Zoom Pods et mousse ZoomX pour une propulsion maximale lors de vos compétitions.",
+    description: "La chaussure record de Nike. L'Alphafly 3 cumule double plaque carbone, Air Zoom Pods et mousse ZoomX pour une propulsion maximale lors de tes compétitions.",
     benefits: ["Double plaque carbone", "Air Zoom Pods", "ZoomX Foam", "Propulsion record"],
     niveau: ["avancé"],
     objectif: ["performance"],
@@ -901,7 +901,7 @@ export const products: Product[] = [
     poids: 230,
     prix: 219.99,
     image: "https://img.therunningcollective.fr/hoka-one-one-mach-x-2-m-1160x725.webp",
-    description: "La plaque carbone Hoka accessible. La Mach X 2 intègre une tige en fibre de carbone et la mousse PEBA pour une propulsion maximale lors de vos courses rapides.",
+    description: "La plaque carbone Hoka accessible. La Mach X 2 intègre une tige en fibre de carbone et la mousse PEBA pour une propulsion maximale lors de tes courses rapides.",
     benefits: ["Tige carbone", "Mousse PEBA", "Rocker geometry", "Propulsion maximale"],
     niveau: ["avancé"],
     objectif: ["performance"],
@@ -1095,7 +1095,7 @@ export const products: Product[] = [
     poids: 253,
     prix: 89.99,
     image: "https://img.therunningcollective.fr/reebok-floatride-energy-5-m-1160x725.webp",
-    description: "Le meilleur rapport qualité/prix du running. La Floatride Energy 5 offre un amorti Floatride réactif et léger pour des entraînements dynamiques sans vous ruiner.",
+    description: "Le meilleur rapport qualité/prix du running. La Floatride Energy 5 offre un amorti Floatride réactif et léger pour des entraînements dynamiques sans te ruiner.",
     benefits: ["Floatride Foam", "Légèreté", "Meilleur rapport qualité/prix", "Réactivité"],
     niveau: ["débutant", "intermédiaire", "avancé"],
     objectif: ["confort", "performance"],
@@ -1408,41 +1408,93 @@ export interface UserProfile {
   budget?: string;          // '<100' | '100-140' | '140-180' | '180+'
   voutePlantaire?: string;  // 'plat' | 'normale' | 'creux' | 'inconnu'
   volume?: string;          // '0-10' | '10-25' | '25-50' | '50+'
+  // Consentement explicite au traitement de la donnée de santé « blessures » (RGPD art. 9)
+  healthConsent?: boolean;
+  healthConsentAt?: string | null;
 }
 
 export interface Recommendation {
   product: Product;
   score: number;
+  /** Compatibilité 0-100, calculée sur les seuls critères renseignés par le coureur */
+  percent: number;
   reasons: string[];
+  /** Points d'attention honnêtes (compromis ou limites vis-à-vis du profil) */
+  cautions: string[];
 }
 
 export function getRecommendations(
   profile: UserProfile,
   limit = 3,
-  sourceProducts: Product[] = products
+  sourceProducts: Product[] = products,
+  livePrices: Record<string, number> = {}
 ): Recommendation[] {
-  // Filtre budget avant scoring (garde au moins 5 modèles)
+  // Filtre budget avant scoring (garde au moins 5 modèles).
+  // Prix utilisé : prix réel relevé chez un marchand s'il existe, sinon prix catalogue (indicatif).
   let candidateProducts = sourceProducts
   if (profile.budget) {
     const inBudget = sourceProducts.filter((p) => {
-      if (profile.budget === '<100')    return p.prix < 100
-      if (profile.budget === '100-140') return p.prix >= 100 && p.prix <= 140
-      if (profile.budget === '140-180') return p.prix > 140 && p.prix <= 180
-      if (profile.budget === '180+')    return p.prix > 180
+      const prix = livePrices[p.id] ?? p.prix
+      if (profile.budget === '<100')    return prix < 100
+      if (profile.budget === '100-140') return prix >= 100 && prix <= 140
+      if (profile.budget === '140-180') return prix > 140 && prix <= 180
+      if (profile.budget === '180+')    return prix > 180
       return true
     })
     if (inBudget.length >= 5) candidateProducts = inBudget
   }
 
+  // Terrain : exclusion stricte (route ≠ trail, les modèles « mixte » restent éligibles).
+  // Repli : si moins de 3 chaussures restent, on garde tout et une forte pénalité s'applique au scoring.
+  const wantsStrictTerrain = profile.terrain === 'route' || profile.terrain === 'trail'
+  if (wantsStrictTerrain) {
+    const compatible = candidateProducts.filter(
+      (p) => p.terrain.includes(profile.terrain as any) || p.terrain.includes('mixte')
+    )
+    if (compatible.length >= Math.max(limit, 3)) candidateProducts = compatible
+  }
+
+  // Score maximal atteignable pour CE profil (seuls les critères renseignés comptent)
+  const maxScore = (() => {
+    let m = 30 + 20 + 12 + 12 + 8; // foulée, terrain, niveau, objectif, largeur
+    if (profile.foulee === "hyperpronateur") m += 12;
+    if (profile.dropPreference) m += 8;
+    if (profile.amortPreference) m += 8;
+    if (profile.blessures === "oui") m += 15;
+    if (profile.voutePlantaire === "plat" || profile.voutePlantaire === "creux") m += 15;
+    else if (profile.voutePlantaire === "normale") m += 5;
+    if (profile.volume === "25-50" || profile.volume === "50+") m += 8;
+    if (["marathon", "ultra", "5km", "10km"].includes(profile.distance)) m += 8;
+    if (profile.distance === "semi") m += 6;
+    if (profile.distance === "ultra") m += 6;
+    if (profile.poids >= 85) m += 8;
+    if (profile.objectif === "performance") m += 8;
+    return m;
+  })();
+  const toPercent = (score: number) => Math.max(0, Math.min(100, Math.round((score / maxScore) * 100)));
+
   const scored = candidateProducts.map((product) => {
     let score = 0;
     const reasons: string[] = [];
+    const cautions: string[] = [];
 
     // Foulée match (most important)
-    if (product.foulee.includes(profile.foulee as any)) {
+    // Hyperpronation : mêmes modèles que la pronation (catalogue « pronateur »), avec un bonus de stabilité
+    const hyper = profile.foulee === "hyperpronateur";
+    const fouleeKey = hyper ? "pronateur" : profile.foulee;
+    if (product.foulee.includes(fouleeKey as any)) {
       score += 30;
-      const fouleeLabel = profile.foulee === "pronateur" ? "stabilité" : profile.foulee === "supinateur" ? "amorti renforcé" : "universalité";
-      reasons.push(`Adaptée à votre foulée ${profile.foulee} — ${fouleeLabel}`);
+      const fouleeLabel = fouleeKey === "pronateur" ? "stabilité" : fouleeKey === "supinateur" ? "amorti renforcé" : "universalité";
+      reasons.push(`Adaptée à ta foulée ${hyper ? "très pronatrice" : profile.foulee} — ${fouleeLabel}`);
+    }
+    else {
+      // Foulée incompatible : pénalité (forte pour les profils qui ont besoin de correction)
+      score -= profile.foulee === "neutre" ? 8 : 15;
+      cautions.push(`Pas spécifiquement conçue pour une foulée ${hyper ? "très pronatrice" : profile.foulee}`);
+    }
+    if (hyper && product.stabilite === "élevée") {
+      score += 12;
+      reasons.push("Contrôle renforcé de la pronation");
     }
 
     // Terrain match
@@ -1452,12 +1504,21 @@ export function getRecommendations(
     } else if (product.terrain.includes("mixte")) {
       score += 8;
       reasons.push("Polyvalente tous terrains");
+    } else if (wantsStrictTerrain) {
+      score -= 40; // terrain incompatible (repli quand le catalogue est trop réduit)
+      cautions.push(`Pensée pour un autre terrain que le ${profile.terrain}`);
     }
 
     // Niveau match
     if (product.niveau.includes(profile.niveau as any)) {
       score += 12;
       reasons.push(`Adaptée au niveau ${profile.niveau}`);
+    }
+
+    // Débutant : pas de chaussure réservée aux coureurs expérimentés
+    if (profile.niveau === "débutant" && !product.niveau.includes("débutant" as any)) {
+      score -= 12;
+      cautions.push("Plutôt destinée aux coureurs déjà expérimentés");
     }
 
     // Objectif match
@@ -1470,6 +1531,8 @@ export function getRecommendations(
     if (product.largeurDisponible.includes(profile.largeurPied as any)) {
       score += 8;
       reasons.push(`Disponible en largeur ${profile.largeurPied}`);
+    } else {
+      cautions.push(`Pas disponible en largeur ${profile.largeurPied}`);
     }
 
     // Drop preference
@@ -1497,7 +1560,13 @@ export function getRecommendations(
     }
     if (profile.blessures === "oui" && product.stabilite === "élevée") {
       score += 5;
-      reasons.push("Stabilité renforcée pour protéger vos articulations");
+      reasons.push("Stabilité renforcée pour protéger tes articulations");
+    }
+
+    // Blessures : éviter les chaussures à la fois peu amorties et peu stables
+    if (profile.blessures === "oui" && product.amorti === "faible" && product.stabilite === "faible") {
+      score -= 8;
+      cautions.push("Peu de maintien et peu d'amorti, à surveiller avec tes antécédents de blessures");
     }
 
     // Voûte plantaire
@@ -1537,15 +1606,60 @@ export function getRecommendations(
       reasons.push("Légèreté idéale pour les distances courtes");
     }
 
-    return { product, score, reasons };
+    // Semi-marathon : confort suffisant sur 1h30-2h
+    if (profile.distance === "semi" && product.amorti !== "faible") {
+      score += 6;
+      reasons.push("Amorti adapté à la durée d'un semi-marathon");
+    }
+
+    // Ultra : protection sur trail, éviter les modèles trop minimalistes
+    if (profile.distance === "ultra") {
+      if (product.terrain.includes("trail") && product.amorti !== "faible") {
+        score += 6;
+        reasons.push("Protection adaptée à l'ultra-trail");
+      }
+      if (product.poids < 220) {
+        score -= 6;
+        cautions.push("Très légère : protection limitée sur ultra");
+      }
+    }
+
+    // Poids du coureur : le gabarit change le besoin d'amorti
+    if (profile.poids >= 85) {
+      if (product.amorti === "élevé") {
+        score += 8;
+        reasons.push("Amorti élevé, adapté à ton gabarit");
+      } else if (product.amorti === "faible") {
+        score -= 8;
+        cautions.push("Amorti limité pour ton gabarit");
+      }
+    }
+
+    // Dynamisme : performance → restitution d'énergie
+    if (profile.objectif === "performance") {
+      if (product.dynamisme === "élevé") {
+        score += 8;
+        reasons.push("Dynamique : bonne restitution d'énergie");
+      } else if (product.dynamisme === "faible") {
+        score -= 6;
+        cautions.push("Peu dynamique pour un objectif de performance");
+      }
+    }
+
+    return { product, score, percent: toPercent(score), reasons, cautions };
   });
 
   const minScore = limit > 5 ? 5 : 25;
+  // À score égal : la chaussure au prix réel (ou catalogue) le plus bas passe en premier
+  const priceOf = (r: { product: Product }) => livePrices[r.product.id] ?? r.product.prix;
+  const byScoreThenPrice = (a: { product: Product; score: number }, b: { product: Product; score: number }) =>
+    b.score - a.score || priceOf(a) - priceOf(b);
+
   const filtered = scored
     .filter((r) => r.score >= minScore)
-    .sort((a, b) => b.score - a.score);
+    .sort(byScoreThenPrice);
 
   // Always return up to `limit` results (take best matches even if below threshold)
-  const result = filtered.length >= limit ? filtered : scored.sort((a, b) => b.score - a.score);
+  const result = filtered.length >= limit ? filtered : scored.sort(byScoreThenPrice);
   return result.slice(0, limit);
 }

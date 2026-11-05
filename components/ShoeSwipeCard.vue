@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Heart, X, Star } from 'lucide-vue-next'
 import type { Shoe } from '~/data/shoes'
 
 interface Props {
@@ -108,6 +109,11 @@ function onPointerUp() {
   <div
     class="absolute inset-0 select-none touch-none"
     :style="cardStyle"
+    role="group"
+    aria-roledescription="carte"
+    :aria-label="`${shoe.brand} ${shoe.model}`"
+    :aria-hidden="isTop ? undefined : 'true'"
+    :inert="isTop ? undefined : true"
     @pointerdown="onPointerDown"
     @pointermove="onPointerMove"
     @pointerup="onPointerUp"
@@ -116,30 +122,32 @@ function onPointerUp() {
     <!-- Overlays MATCH / PASSE -->
     <template v-if="isTop">
       <div
-        class="absolute top-7 left-5 z-20 border-4 border-green-500 text-green-500 font-black text-xl px-3 py-1 rounded-xl pointer-events-none -rotate-[22deg]"
+        aria-hidden="true"
+        class="absolute top-7 left-5 z-20 border-4 border-green-700 text-green-700 dark:border-green-500 dark:text-green-500 font-black text-xl px-3 py-1 rounded-xl pointer-events-none -rotate-[22deg]"
         :style="{ opacity: likeOpacity }"
       >
-        MATCH ❤️
+        <span class="inline-flex items-center gap-1.5">MATCH <Heart class="w-5 h-5 fill-current" aria-hidden="true" /></span>
       </div>
       <div
-        class="absolute top-7 right-5 z-20 border-4 border-red-400 text-red-400 font-black text-xl px-3 py-1 rounded-xl pointer-events-none rotate-[22deg]"
+        aria-hidden="true"
+        class="absolute top-7 right-5 z-20 border-4 border-red-700 text-red-700 dark:border-red-400 dark:text-red-400 font-black text-xl px-3 py-1 rounded-xl pointer-events-none rotate-[22deg]"
         :style="{ opacity: nopeOpacity }"
       >
-        PASSE ✕
+        <span class="inline-flex items-center gap-1.5">PASSE <X class="w-5 h-5" aria-hidden="true" /></span>
       </div>
     </template>
 
     <!-- Carte -->
     <div class="w-full h-full bg-card rounded-3xl border border-border shadow-2xl overflow-hidden flex flex-col">
       <!-- Image -->
-      <div class="flex-[4] bg-gradient-to-br from-secondary/80 to-secondary/30 relative overflow-hidden">
+      <div class="flex-[4] bg-white relative overflow-hidden">
         <ShoeImage
           :src="shoe.image"
           :alt="`${shoe.brand} ${shoe.model}`"
-          class="w-full h-full object-contain p-5"
+          class="w-full h-full object-contain p-5 mix-blend-multiply [filter:brightness(1.04)_contrast(1.03)]"
           loading="eager"
         />
-        <span class="absolute top-3 left-3 bg-background/80 backdrop-blur-sm text-foreground text-xs font-bold px-2.5 py-1 rounded-full">
+        <span class="absolute top-3 left-3 bg-white/90 text-neutral-900 border border-neutral-200 text-xs font-bold px-2.5 py-1 rounded-full">
           {{ shoe.brand }}
         </span>
       </div>
@@ -150,12 +158,15 @@ function onPointerUp() {
           <h3 class="text-xl font-black tracking-tight leading-snug">{{ shoe.model }}</h3>
           <!-- Étoiles de correspondance -->
           <div class="flex items-center gap-1 mt-1.5 mb-1">
-            <span
-              v-for="i in 5"
-              :key="i"
-              class="text-base leading-none"
-              :class="i <= starCount ? 'text-yellow-400' : 'text-muted-foreground/30'"
-            >★</span>
+            <span class="flex items-center gap-0.5" role="img" :aria-label="`Correspondance : ${starCount} sur 5`">
+              <Star
+                v-for="i in 5"
+                :key="i"
+                class="w-4 h-4"
+                :class="i <= starCount ? 'text-brand fill-current' : 'text-muted-foreground/40'"
+                aria-hidden="true"
+              />
+            </span>
             <span class="text-xs text-muted-foreground ml-1 font-medium">Correspondance</span>
           </div>
           <p class="text-sm text-muted-foreground leading-relaxed">{{ shoe.description }}</p>
@@ -181,7 +192,7 @@ function onPointerUp() {
             :key="spec.label"
             class="text-center bg-secondary/60 rounded-xl py-2"
           >
-            <p class="text-[10px] text-muted-foreground uppercase tracking-wider">{{ spec.label }}</p>
+            <p class="text-xs text-muted-foreground uppercase tracking-wider">{{ spec.label }}</p>
             <p class="text-sm font-black capitalize mt-0.5">{{ spec.value }}</p>
           </div>
         </div>

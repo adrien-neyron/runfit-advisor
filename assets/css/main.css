@@ -11,14 +11,15 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 5%;
     --primary: 18 100% 55%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 0 0% 5%;      /* texte sombre sur l'orange : 6,36:1 (blanc : 3,06:1) */
+    --primary-text: 18 100% 38%;        /* orange pour du TEXTE sur fond clair : 5,39:1 sur blanc */
     --secondary: 0 0% 94%;
     --secondary-foreground: 0 0% 10%;
     --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted-foreground: 0 0% 40%;
     --accent: 18 100% 55%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84% 60%;
+    --destructive: 0 74% 42%;
     --destructive-foreground: 0 0% 100%;
     --border: 0 0% 90%;
     --input: 0 0% 90%;
@@ -38,7 +39,8 @@
     --popover: 0 0% 8%;
     --popover-foreground: 0 0% 95%;
     --primary: 18 100% 55%;
-    --primary-foreground: 0 0% 100%;
+    --primary-foreground: 0 0% 5%;
+    --primary-text: 18 100% 55%;
     --secondary: 0 0% 15%;
     --secondary-foreground: 0 0% 90%;
     --muted: 0 0% 15%;
@@ -80,5 +82,28 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+}
+
+/* ── Mouvement réduit (WCAG 2.3.3 / RGAA 13.8) ──────────────────────────────
+   Respecte le réglage système. Les animations d'apparition (v-motion) sont
+   désactivées côté JS dans plugins/reduced-motion.client.ts.
+   Les indicateurs de chargement (animate-spin) restent actifs : ils portent une information. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  .animate-spin {
+    animation-duration: 1.2s !important;
+    animation-iteration-count: infinite !important;
   }
 }

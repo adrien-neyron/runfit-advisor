@@ -1,16 +1,26 @@
 <script setup lang="ts">
-import { Heart, ArrowLeft, RotateCcw, UserPlus, ChevronRight, ListFilter } from 'lucide-vue-next'
+import { Heart, ArrowLeft, ArrowRight, RotateCcw, UserPlus, ChevronRight, ListFilter, X, Footprints, PartyPopper } from 'lucide-vue-next'
 import { buildSwipeDeck, type SwipeDeckItem } from '~/data/shoes'
 
 const router = useRouter()
 const profileStore = useUserProfileStore()
 const matchesStore = useMatchesStore()
 const shoesStore = useShoesStore()
+const { fetchAvailableShoeIds, fetchOffers, bestOf } = useShoeOffers()
+
+// Photos marchand (même source que /resultats et /matches) pour des visuels identiques partout
+const merchantImages = ref<Map<string, string>>(new Map())
+
+// Chaussures avec au moins un lien d'achat direct (null = information indisponible → pas de filtre)
+const availableIds = ref<Set<string> | null>(null)
 
 type Phase = 'intro' | 'swipe' | 'done'
 const phase = ref<Phase>('intro')
 
-onMounted(() => shoesStore.fetchShoes())
+onMounted(async () => {
+  shoesStore.fetchShoes()
+  availableIds.value = await fetchAvailableShoeIds()
+})
 
 watch(
   () => profileStore.loading,
@@ -22,10 +32,33 @@ watch(
 
 const deck = computed<SwipeDeckItem[]>(() => {
   const profile = profileStore.profile
-  const dbProducts = shoesStore.dbProducts
-  if (!profile || dbProducts.length === 0) return []
-  return buildSwipeDeck(profile, dbProducts, 15)
+  const all = shoesStore.dbProducts
+  if (!profile || all.length === 0) return []
+  // Le paquet ne contient que des chaussures achetables ; si le filtre viderait le paquet, on garde tout
+  const withOffers = availableIds.value ? all.filter((p) => availableIds.value!.has(p.id)) : all
+  return buildSwipeDeck(profile, withOffers.length >= 5 ? withOffers : all, 15).map((item) => {
+    const img = merchantImages.value.get(item.shoe.id)
+    return img ? { ...item, shoe: { ...item.shoe, image: img } } : item
+  })
 })
+
+// Charge les photos marchand du paquet dès qu'il est constitué (une seule requête)
+watch(
+  () => deck.value.map((d) => d.shoe.id).join(','),
+  async (ids) => {
+    if (!ids) return
+    const missing = ids.split(',').filter((id) => !merchantImages.value.has(id))
+    if (!missing.length) return
+    const offers = await fetchOffers(missing)
+    const next = new Map(merchantImages.value)
+    for (const id of missing) {
+      const url = bestOf(offers.get(id))?.imageUrl
+      if (url) next.set(id, url)
+    }
+    if (next.size !== merchantImages.value.size) merchantImages.value = next
+  },
+  { immediate: true },
+)
 
 const handleSwipe = (shoeId: string, liked: boolean) => {
   matchesStore.swipe(shoeId, liked)
@@ -48,17 +81,25 @@ const profilePills = computed(() => {
 })
 
 const deckReady = computed(() => !profileStore.loading && !shoesStore.loading && deck.value.length > 0)
+
+useSeoMeta({
+  title: 'Swipe tes chaussures — RunMatch',
+  description: 'Swipe les chaussures de running : passe ou match, on affine tes recommandations.',
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>
   <div class="min-h-screen bg-background flex flex-col">
     <ToastContainer />
 
+    <h1 class="sr-only">Swipe tes chaussures de running</h1>
+
     <!-- Nav -->
     <div class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div class="container flex items-center justify-between h-14 max-w-lg">
-        <UiButton variant="ghost" size="icon" aria-label="Retour à l'accueil" @click="router.push('/')">
-          <ArrowLeft class="w-5 h-5" />
+        <UiButton variant="ghost" size="icon" aria-label="Retour à l'accueil" to="/">
+          <ArrowLeft class="w-5 h-5" aria-hidden="true" />
         </UiButton>
 
         <span class="font-black tracking-tighter text-sm">
@@ -69,13 +110,13 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
           variant="ghost"
           size="icon"
           :aria-label="`Mes matchs (${matchesStore.likedShoes.length})`"
-          class="relative"
-          @click="router.push('/matches')"
+          class="relative" to="/matches"
         >
-          <Heart class="w-5 h-5" />
+          <Heart class="w-5 h-5" aria-hidden="true" />
           <span
             v-if="matchesStore.likedShoes.length > 0"
-            class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[9px] font-bold flex items-center justify-center"
+            aria-hidden="true"
+            class="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center"
           >
             {{ matchesStore.likedShoes.length }}
           </span>
@@ -94,11 +135,11 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
             <p class="text-xs font-bold leading-tight">
               {{ matchesStore.guestLikedCount }} match{{ matchesStore.guestLikedCount > 1 ? 's' : '' }} non sauvegardé{{ matchesStore.guestLikedCount > 1 ? 's' : '' }}
             </p>
-            <p class="text-[11px] text-muted-foreground leading-tight mt-0.5">
+            <p class="text-xs text-muted-foreground leading-tight mt-0.5">
               Ferme l'onglet et tu les perds. Crée un compte, c'est gratuit.
             </p>
           </div>
-          <UiButton size="sm" variant="hero" class="shrink-0 gap-1.5 text-xs" @click="router.push('/connexion')">
+          <UiButton size="sm" variant="hero" class="shrink-0 gap-1.5 text-xs" to="/connexion">
             <UserPlus class="w-3.5 h-3.5" />
             Sauvegarder
           </UiButton>
@@ -114,8 +155,9 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
       <Transition name="phase" mode="out-in">
 
         <!-- ═══ CHARGEMENT ════════════════════════════════════════════════════ -->
-        <div v-if="profileStore.loading" key="loading" class="flex items-center justify-center">
-          <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <div v-if="profileStore.loading" key="loading" class="flex items-center justify-center" role="status">
+          <span class="sr-only">Chargement de ton profil…</span>
+          <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" aria-hidden="true" />
         </div>
 
         <!-- ═══ INTRO ══════════════════════════════════════════════════════════ -->
@@ -127,20 +169,20 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
           <!-- Icône + compteur -->
           <div>
             <div class="w-16 h-16 rounded-full accent-gradient flex items-center justify-center mx-auto mb-5 shadow-lg shadow-primary/30">
-              <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+              <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
             </div>
 
-            <div v-if="deckReady">
+            <div v-if="deckReady" role="status">
               <p class="text-4xl font-black tracking-tight">
-                <span class="text-primary">{{ deck.length }}</span> paires
+                <span class="text-brand">{{ deck.length }}</span> paires
               </p>
               <p class="text-xl font-black tracking-tight">sélectionnées pour toi</p>
             </div>
-            <div v-else class="space-y-2">
+            <div v-else class="space-y-2" role="status">
               <p class="text-2xl font-black tracking-tight">Sélection en cours…</p>
-              <div class="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto" />
+              <div class="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto" aria-hidden="true" />
             </div>
           </div>
 
@@ -149,7 +191,7 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
             <span
               v-for="pill in profilePills"
               :key="pill"
-              class="px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs font-semibold"
+              class="px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-brand text-xs font-semibold"
             >
               {{ pill }}
             </span>
@@ -157,36 +199,36 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
 
           <!-- Tutorial swipe -->
           <div class="w-full bg-secondary/50 rounded-2xl p-5">
-            <p class="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-5">
+            <p class="text-xs uppercase tracking-widest text-muted-foreground font-semibold mb-5">
               Comment ça marche
             </p>
             <div class="flex items-center justify-between gap-3">
               <!-- Passe -->
               <div class="flex flex-col items-center gap-2 flex-1">
-                <div class="w-12 h-12 rounded-full bg-background border-2 border-red-400/40 flex items-center justify-center text-xl">
-                  ✕
+                <div class="w-12 h-12 rounded-full bg-background border-2 border-red-700/40 dark:border-red-400/40 flex items-center justify-center">
+                  <X class="w-5 h-5 text-red-700 dark:text-red-400" aria-hidden="true" />
                 </div>
-                <p class="text-xs font-bold text-red-400">Passe</p>
-                <p class="text-[10px] text-muted-foreground leading-tight">Glisse à gauche</p>
+                <p class="text-xs font-bold text-red-700 dark:text-red-400">Passe</p>
+                <p class="text-xs text-muted-foreground leading-tight">Glisse à gauche</p>
               </div>
 
               <!-- Chaussure centrale -->
               <div class="flex flex-col items-center gap-1">
-                <div class="text-3xl">👟</div>
+                <Footprints class="w-8 h-8 text-brand" aria-hidden="true" />
                 <div class="flex items-center gap-1 text-muted-foreground/40 text-xs mt-1">
-                  <span>←</span>
+                  <ArrowLeft class="w-3 h-3" aria-hidden="true" />
                   <span class="w-10 h-px bg-muted-foreground/20" />
-                  <span>→</span>
+                  <ArrowRight class="w-3 h-3" aria-hidden="true" />
                 </div>
               </div>
 
               <!-- Match -->
               <div class="flex flex-col items-center gap-2 flex-1">
-                <div class="w-12 h-12 rounded-full bg-background border-2 border-green-400/40 flex items-center justify-center text-xl">
-                  ❤️
+                <div class="w-12 h-12 rounded-full bg-background border-2 border-green-700/40 dark:border-green-400/40 flex items-center justify-center">
+                  <Heart class="w-5 h-5 text-green-700 dark:text-green-400" aria-hidden="true" />
                 </div>
-                <p class="text-xs font-bold text-green-400">Match</p>
-                <p class="text-[10px] text-muted-foreground leading-tight">Glisse à droite</p>
+                <p class="text-xs font-bold text-green-700 dark:text-green-400">Match</p>
+                <p class="text-xs text-muted-foreground leading-tight">Glisse à droite</p>
               </div>
             </div>
           </div>
@@ -203,13 +245,10 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
               Découvrir mes paires
               <ChevronRight class="w-4 h-4" />
             </UiButton>
-            <button
-              class="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5"
-              @click="router.push('/resultats')"
-            >
+            <NuxtLink to="/resultats" class="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center gap-1.5 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
               <ListFilter class="w-3.5 h-3.5" />
               Voir la liste complète à la place
-            </button>
+            </NuxtLink>
           </div>
         </div>
 
@@ -231,18 +270,18 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
           :enter="{ opacity: 1, y: 0, transition: { duration: 400 } }"
           class="text-center max-w-xs"
         >
-          <div class="text-6xl mb-5">🎉</div>
+          <PartyPopper class="w-14 h-14 text-brand mb-5 mx-auto" aria-hidden="true" />
           <h2 class="text-3xl font-black mb-2 tracking-tight">C'est terminé !</h2>
 
           <div v-if="matchesStore.likedShoes.length > 0">
             <p class="text-muted-foreground mb-1">
               Tu as matché
-              <span class="text-primary font-bold">
+              <span class="text-brand font-bold">
                 {{ matchesStore.likedShoes.length }} paire{{ matchesStore.likedShoes.length !== 1 ? 's' : '' }}
               </span>
             </p>
             <p class="text-xs text-muted-foreground mb-8">
-              Compare les prix et commande directement depuis ta page Matchs.
+              Compare les prix et commande directement depuis ta page Mes matchs.
             </p>
           </div>
           <div v-else>
@@ -258,12 +297,12 @@ const deckReady = computed(() => !profileStore.loading && !shoesStore.loading &&
               variant="hero"
               size="lg"
               class="gap-2"
-              @click="router.push('/matches')"
+              to="/matches"
             >
               <Heart class="w-4 h-4" />
               Voir mes {{ matchesStore.likedShoes.length }} match{{ matchesStore.likedShoes.length !== 1 ? 's' : '' }}
             </UiButton>
-            <UiButton variant="outline" size="lg" class="gap-2" @click="router.push('/questionnaire')">
+            <UiButton variant="outline" size="lg" class="gap-2" to="/questionnaire">
               <RotateCcw class="w-4 h-4" />
               Refaire le questionnaire
             </UiButton>

@@ -33,6 +33,8 @@ export default {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
         },
+        // Orange lisible en texte (>= 4,5:1) ; `bg-primary` reste l'orange de marque
+        brand: 'hsl(var(--primary-text))',
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
           foreground: 'hsl(var(--secondary-foreground))',

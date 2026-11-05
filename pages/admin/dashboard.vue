@@ -31,7 +31,7 @@
       </div>
 
       <!-- Raccourcis -->
-      <div class="grid md:grid-cols-4 gap-4">
+      <div class="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
         <NuxtLink
           to="/admin/shoes"
           class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-orange-500/50 transition-colors group"
@@ -59,6 +59,28 @@
           <p class="text-sm text-gray-400 mt-1">Écrire et publier des articles</p>
         </NuxtLink>
 
+        <NuxtLink
+          to="/admin/revenus"
+          class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-orange-500/50 transition-colors group"
+        >
+          <div class="text-2xl mb-2">💶</div>
+          <h3 class="font-semibold group-hover:text-orange-400 transition-colors">Revenus</h3>
+          <p class="text-sm text-gray-400 mt-1">Clics, ventes et commissions d'affiliation</p>
+        </NuxtLink>
+
+        <button
+          type="button"
+          class="text-left bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-orange-500/50 transition-colors group disabled:opacity-60 disabled:cursor-wait"
+          :disabled="syncing"
+          @click="syncOffers"
+        >
+          <div class="text-2xl mb-2">🔄</div>
+          <h3 class="font-semibold group-hover:text-orange-400 transition-colors">
+            {{ syncing ? 'Synchronisation en cours…' : 'Synchroniser les offres' }}
+          </h3>
+          <p class="text-sm text-gray-400 mt-1">Met à jour prix, stocks et photos depuis les flux marchands</p>
+        </button>
+
         <label
           class="bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-orange-500/50 transition-colors group cursor-pointer"
           @click="triggerCsvImport"
@@ -67,6 +89,24 @@
           <h3 class="font-semibold group-hover:text-orange-400 transition-colors">Import CSV</h3>
           <p class="text-sm text-gray-400 mt-1">Importer un feed d'affiliation</p>
         </label>
+      </div>
+
+      <!-- Résultat de la synchro des offres -->
+      <div v-if="syncError || syncResults" class="mt-6 bg-gray-900 border border-gray-800 rounded-xl p-4">
+        <h3 class="font-semibold mb-2">Synchronisation des offres</h3>
+        <p v-if="syncError" class="text-sm text-red-400">{{ syncError }}</p>
+        <ul v-else class="space-y-1 text-sm">
+          <li v-for="r in syncResults" :key="r.merchantSlug" class="flex flex-wrap gap-x-6 gap-y-1">
+            <span class="font-medium">{{ r.merchantSlug }}</span>
+            <span :class="r.status === 'success' ? 'text-green-400' : 'text-red-400'">
+              {{ r.status === 'success' ? '✓ terminée' : '✗ ' + (r.errorMessage || r.status) }}
+            </span>
+            <span class="text-gray-400">{{ r.itemsFetched }} lignes lues</span>
+            <span class="text-gray-400">{{ r.itemsUpserted }} offres mises à jour</span>
+            <span class="text-gray-400">{{ r.itemsRemoved }} retirées</span>
+            <span class="text-gray-500">{{ Math.round(r.durationMs / 1000) }} s</span>
+          </li>
+        </ul>
       </div>
 
       <!-- Import CSV toast -->
@@ -104,6 +144,9 @@ const router   = useRouter()
 const loading      = ref(true)
 const csvInput     = ref<HTMLInputElement>()
 const importResult = ref<any>(null)
+const syncing      = ref(false)
+const syncError    = ref('')
+const syncResults  = ref<any[] | null>(null)
 
 const stats = reactive({
   active:        0,
@@ -131,6 +174,23 @@ async function loadStats() {
   stats.drafts        = drafts ?? 0
   stats.missingImages = missingImg ?? 0
   stats.affiliateLinks = affiliates ?? 0
+}
+
+// Lance la synchro de tous les flux marchands (plusieurs dizaines de secondes)
+async function syncOffers() {
+  if (syncing.value) return
+  syncing.value = true
+  syncError.value = ''
+  syncResults.value = null
+  try {
+    const r = await $fetch<{ results: any[] }>('/api/admin/sync-feeds', { method: 'POST', body: {} })
+    syncResults.value = r.results
+    await loadStats()
+  } catch (err: any) {
+    syncError.value = err.data?.message || err.data?.statusMessage || err.message || 'Erreur inconnue'
+  } finally {
+    syncing.value = false
+  }
 }
 
 function triggerCsvImport() {

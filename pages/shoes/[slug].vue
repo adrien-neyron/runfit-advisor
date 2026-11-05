@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ArrowLeft, Heart, HeartOff, ExternalLink, ShoppingCart, Loader2 } from 'lucide-vue-next'
+import { ArrowLeft, Heart, HeartOff, ShoppingCart, Footprints } from 'lucide-vue-next'
 import { buildTags } from '~/data/shoes'
 import { getRecommendations } from '~/data/products'
-import type { MerchantOffer } from '~/composables/useMerchants'
+import WhereToBuy from '~/components/shoe/WhereToBuy.vue'
+import type { ShoeOffer } from '~/composables/useShoeOffers'
 
 const route = useRoute()
 const router = useRouter()
@@ -11,134 +12,82 @@ const slug = computed(() => route.params.slug as string)
 const matchesStore   = useMatchesStore()
 const shoesStore     = useShoesStore()
 const profileStore   = useUserProfileStore()
-const { fetchMerchantOffers, trackOfferClick } = useMerchants()
 
-const scorePercent = (score: number) => Math.min(100, Math.round((score / 90) * 100))
+const scorePercent = (percent: number) => Math.max(0, Math.min(100, Math.round(percent)))
 
-const compatScore = computed<number | null>(() => {
+const matchRec = computed(() => {
   if (!profileStore.profile || !shoe.value) return null
-  const results = getRecommendations(profileStore.profile, 1, [shoe.value] as any)
-  return results[0]?.score ?? null
+  return getRecommendations(profileStore.profile, 1, [shoe.value] as any)[0] ?? null
 })
+const compatScore = computed<number | null>(() => matchRec.value?.percent ?? null)
 
-type LinkStatus = 'checking' | 'ok' | 'unavailable' | 'unknown' | 'search'
-
-const offers        = ref<MerchantOffer[]>([])
-const offersLoading = ref(false)
-const linkStatuses  = ref<Record<string, LinkStatus>>({})
 
 // Charge les chaussures au montage
 onMounted(() => shoesStore.fetchShoes())
 
 // Récupère la chaussure depuis le store (avec fallback statique intégré)
 const shoe     = computed(() => shoesStore.getShoeById(slug.value))
+
+// Photo de l'offre : la même variante (coloris) que celle vendue via le lien d'achat
+const { fetchOffers, bestOf } = useShoeOffers()
+const heroOffer = ref<ShoeOffer | null>(null)
+watch(() => shoe.value?.id, async (id) => {
+  heroOffer.value = null
+  if (!id) return
+  heroOffer.value = bestOf((await fetchOffers([id])).get(id))
+}, { immediate: true })
 const shoeTags = computed(() => shoe.value ? buildTags(shoe.value) : [])
 
-// SEO dynamique
+// SEO dynamique : titre, description, canonical, partage social et données structurées Product
+const siteUrl = useRuntimeConfig().public.siteUrl.replace(/\/+$/, '')
+const canonical = computed(() => (shoe.value ? `${siteUrl}/shoes/${shoe.value.id}` : undefined))
+const seoImage = computed(() => {
+  const img = heroOffer.value?.imageUrl || shoe.value?.image || ''
+  return /^https?:\/\//.test(img) ? img : undefined
+})
+
+useSeoMeta({
+  title: () => (shoe.value ? `${shoe.value.brand} ${shoe.value.model} : caractéristiques, prix et où l'acheter | RunMatch` : 'RunMatch'),
+  description: () => (shoe.value
+    ? `${shoe.value.brand} ${shoe.value.model} : ${shoe.value.description.slice(0, 140)}… Caractéristiques détaillées et où l'acheter.`
+    : 'RunMatch — Trouve ta chaussure de running idéale'),
+  ogTitle: () => (shoe.value ? `${shoe.value.brand} ${shoe.value.model} | RunMatch` : 'RunMatch'),
+  ogDescription: () => (shoe.value ? shoe.value.description.slice(0, 160) : undefined),
+  ogImage: () => seoImage.value,
+  ogType: 'website',
+  twitterCard: 'summary_large_image',
+})
+
 useHead(() => ({
-  title: shoe.value
-    ? `${shoe.value.brand} ${shoe.value.model} — Avis, Caractéristiques & Prix | RunMatch`
-    : 'RunMatch',
-  meta: shoe.value
-    ? [
-        {
-          name: 'description',
-          content: `${shoe.value.brand} ${shoe.value.model} : ${shoe.value.description.slice(0, 140)}… Comparez les prix dès ${shoe.value.prix} €.`,
-        },
-      ]
+  link: canonical.value ? [{ rel: 'canonical', href: canonical.value }] : [],
+  script: shoe.value
+    ? [{
+        type: 'application/ld+json',
+        // Le prix n'est déclaré que s'il est vérifié récemment (offre affichée sur la page, en stock)
+        innerHTML: JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'Product',
+          name: `${shoe.value.brand} ${shoe.value.model}`,
+          brand: { '@type': 'Brand', name: shoe.value.brand },
+          description: shoe.value.description,
+          sku: shoe.value.id,
+          ...(seoImage.value ? { image: [seoImage.value] } : {}),
+          ...(heroOffer.value?.price != null
+            ? {
+                offers: {
+                  '@type': 'Offer',
+                  url: canonical.value,
+                  priceCurrency: 'EUR',
+                  price: heroOffer.value.price,
+                  availability: 'https://schema.org/InStock',
+                  seller: { '@type': 'Organization', name: heroOffer.value.merchantName },
+                },
+              }
+            : {}),
+        }),
+      }]
     : [],
 }))
-
-// Détecte si une URL est une page de recherche (pas un lien produit direct)
-function isSearchUrl(url: string): boolean {
-  try {
-    const u = new URL(url)
-    return (
-      /\/(search|catalogsearch|result|find|recherche)/i.test(u.pathname) ||
-      ['q', 'query', 'k', 'Ntt', 'search'].some((p) => u.searchParams.has(p))
-    )
-  } catch {
-    return false
-  }
-}
-
-// Vérifie chaque lien en analysant le contenu de la page (via le serveur, sans CORS)
-async function verifyLinks(newOffers: MerchantOffer[]) {
-  if (!shoe.value) return
-
-  // Toutes les offres passent en "checking" immédiatement
-  const initial: Record<string, LinkStatus> = {}
-  for (const offer of newOffers) initial[offer.id] = 'checking'
-  linkStatuses.value = initial
-
-  const links = newOffers.map((o) => ({
-    url: o.affiliateUrl,
-    brand: shoe.value!.brand,
-    model: shoe.value!.model,
-    id: o.id,
-  }))
-
-  try {
-    const results = await $fetch<Record<string, 'ok' | 'unavailable' | 'unknown'>>('/api/check-links', {
-      method: 'POST',
-      body: { links: links.map(({ url, brand, model }) => ({ url, brand, model })) },
-    })
-
-    const updated: Record<string, LinkStatus> = {}
-    for (const link of links) {
-      const raw = results[link.url] ?? 'unknown'
-      // Pour les URLs de recherche, "unknown" reste acceptable (page SSR non dispo)
-      updated[link.id] = raw === 'unknown' && isSearchUrl(link.url) ? 'search' : raw
-    }
-    linkStatuses.value = updated
-  } catch {
-    const fallback: Record<string, LinkStatus> = {}
-    for (const offer of newOffers) {
-      fallback[offer.id] = isSearchUrl(offer.affiliateUrl) ? 'search' : 'unknown'
-    }
-    linkStatuses.value = fallback
-  }
-}
-
-// Charge les offres marchands avec prix quand la chaussure est disponible
-watch(
-  shoe,
-  async (s) => {
-    if (!s) return
-    offersLoading.value = true
-    linkStatuses.value  = {}
-    try {
-      const fetched = await fetchMerchantOffers(s.id, { brand: s.brand, model: s.model, basePrice: s.prix })
-      offers.value = fetched
-      verifyLinks(fetched) // vérification en parallèle, non bloquante
-    } catch {
-      offers.value = []
-    } finally {
-      offersLoading.value = false
-    }
-  },
-  { immediate: true },
-)
-
-// Offres visibles : on masque celles confirmées indisponibles
-const visibleOffers = computed(() =>
-  offers.value.filter((o) => linkStatuses.value[o.id] !== 'unavailable'),
-)
-
-const handleOfferClick = (offer: MerchantOffer) => {
-  if (!shoe.value) return
-  trackOfferClick({
-    productId: shoe.value.id,
-    retailerName: offer.merchant,
-    shoeModel: `${shoe.value.brand} ${shoe.value.model}`,
-  })
-}
-
-// Prix le plus bas parmi les offres vérifiées et visibles
-const bestPrice = computed(() => {
-  if (!visibleOffers.value.length) return null
-  return Math.min(...visibleOffers.value.map((o) => o.price))
-})
 
 const liked = computed(() => matchesStore.isLiked(slug.value))
 
@@ -177,7 +126,7 @@ const specs = computed(() => {
         >
           <Heart
             class="w-5 h-5"
-            :class="liked ? 'fill-primary text-primary' : ''"
+            :class="liked ? 'fill-primary text-brand' : ''"
           />
         </UiButton>
         <div v-else class="w-9" />
@@ -186,7 +135,7 @@ const specs = computed(() => {
 
     <!-- Chaussure introuvable -->
     <div v-if="!shoe && !shoesStore.loading" class="min-h-screen flex flex-col items-center justify-center gap-4 px-4">
-      <p class="text-5xl">👟</p>
+      <Footprints class="w-12 h-12 text-brand" aria-hidden="true" />
       <h1 class="text-2xl font-black">Chaussure introuvable</h1>
       <p class="text-muted-foreground text-sm text-center">Ce modèle n'existe pas dans notre catalogue.</p>
       <UiButton @click="router.back()">← Retour</UiButton>
@@ -200,14 +149,13 @@ const specs = computed(() => {
     <!-- Contenu -->
     <div v-else class="pt-14">
       <!-- Hero image -->
-      <div class="bg-gradient-to-br from-secondary/80 to-secondary/20 h-64 md:h-80 relative overflow-hidden">
+      <div class="bg-white h-64 md:h-80 relative overflow-hidden">
         <ShoeImage
-          :src="shoe.image"
+          :src="heroOffer?.imageUrl || shoe.image"
           :alt="`${shoe.brand} ${shoe.model}`"
-          class="w-full h-full object-contain p-8"
+          class="w-full h-full object-contain p-8 mix-blend-multiply [filter:brightness(1.04)_contrast(1.03)]"
           loading="eager"
         />
-        <div class="absolute inset-0 bg-gradient-to-t from-background/30 to-transparent pointer-events-none" />
       </div>
 
       <div class="container max-w-2xl pb-20 px-4 space-y-8">
@@ -222,12 +170,6 @@ const specs = computed(() => {
             <div>
               <p class="text-xs text-muted-foreground font-medium uppercase tracking-widest">{{ shoe.brand }}</p>
               <h1 class="text-3xl font-black tracking-tight leading-tight mt-0.5">{{ shoe.model }}</h1>
-            </div>
-            <div v-if="bestPrice !== null" class="text-right shrink-0">
-              <p class="text-3xl font-black text-primary">
-                {{ bestPrice.toFixed(2) }} €
-              </p>
-              <p class="text-[11px] text-muted-foreground">meilleur prix</p>
             </div>
           </div>
 
@@ -259,7 +201,7 @@ const specs = computed(() => {
                   style="transition: stroke-dashoffset 0.6s ease"
                 />
               </svg>
-              <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black">
+              <span class="absolute inset-0 flex items-center justify-center text-xs font-black">
                 {{ scorePercent(compatScore) }}%
               </span>
             </div>
@@ -270,6 +212,8 @@ const specs = computed(() => {
               <p class="text-xs text-muted-foreground mt-0.5">Basé sur ta foulée, ton terrain et tes objectifs</p>
             </div>
           </div>
+
+          <WhyMatch v-if="matchRec" class="mt-4" :reasons="matchRec.reasons" :cautions="matchRec.cautions" />
         </header>
 
         <!-- Description -->
@@ -303,93 +247,8 @@ const specs = computed(() => {
           </div>
         </section>
 
-        <!-- Où acheter -->
-        <section>
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-lg font-black">Où acheter</h2>
-            <span v-if="bestPrice !== null" class="text-xs text-muted-foreground">
-              à partir de <span class="text-primary font-bold">{{ bestPrice.toFixed(2) }} €</span>
-            </span>
-          </div>
-
-          <!-- Chargement -->
-          <div v-if="offersLoading" class="flex items-center justify-center py-8 gap-2 text-muted-foreground text-sm">
-            <Loader2 class="w-4 h-4 animate-spin" />
-            Recherche des offres…
-          </div>
-
-          <!-- Liste des offres vérifiées -->
-          <div v-else-if="visibleOffers.length > 0 || offers.length > 0" class="flex flex-col gap-2">
-            <a
-              v-for="offer in visibleOffers"
-              :key="offer.id"
-              :href="offer.affiliateUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="flex items-center justify-between bg-card border border-border rounded-2xl px-4 py-3.5 hover:bg-secondary/50 hover:border-primary/30 transition-all group"
-              @click="handleOfferClick(offer)"
-            >
-              <!-- Logo + nom + statut -->
-              <div class="flex items-center gap-3 min-w-0">
-                <img
-                  v-if="offer.logo"
-                  :src="offer.logo"
-                  alt=""
-                  class="w-8 h-8 rounded-lg object-contain bg-white p-0.5 shrink-0"
-                  @error="($event.target as HTMLImageElement).style.display = 'none'"
-                />
-                <div v-else class="w-8 h-8 rounded-lg bg-secondary shrink-0 flex items-center justify-center">
-                  <ShoppingCart class="w-4 h-4 text-muted-foreground" />
-                </div>
-                <div class="min-w-0">
-                  <p class="font-semibold text-sm truncate">{{ offer.merchant }}</p>
-                  <!-- Statut de vérification -->
-                  <div class="flex items-center gap-1 mt-0.5">
-                    <template v-if="linkStatuses[offer.id] === 'checking'">
-                      <Loader2 class="w-2.5 h-2.5 animate-spin text-muted-foreground" />
-                      <span class="text-[10px] text-muted-foreground">Vérification…</span>
-                    </template>
-                    <template v-else-if="linkStatuses[offer.id] === 'ok'">
-                      <span class="w-1.5 h-1.5 rounded-full bg-green-500 shrink-0" />
-                      <span class="text-[10px] text-green-600 dark:text-green-400 font-medium">Disponible</span>
-                    </template>
-                    <template v-else-if="linkStatuses[offer.id] === 'search'">
-                      <span class="text-[10px] text-muted-foreground">Rechercher ce modèle</span>
-                    </template>
-                    <template v-else>
-                      <span class="w-1.5 h-1.5 rounded-full bg-muted-foreground/40 shrink-0" />
-                      <span class="text-[10px] text-muted-foreground">Voir l'offre</span>
-                    </template>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Prix + icône -->
-              <div class="flex items-center gap-2.5 shrink-0 ml-3">
-                <span
-                  class="text-base font-black"
-                  :class="offer.price === bestPrice ? 'text-primary' : 'text-foreground'"
-                >
-                  {{ offer.price.toFixed(2) }} €
-                </span>
-                <ExternalLink class="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />
-              </div>
-            </a>
-
-            <!-- Offres masquées -->
-            <p
-              v-if="visibleOffers.length < offers.length"
-              class="text-[11px] text-muted-foreground text-center pt-1"
-            >
-              {{ offers.length - visibleOffers.length }} offre{{ offers.length - visibleOffers.length > 1 ? 's' : '' }}
-              indisponible{{ offers.length - visibleOffers.length > 1 ? 's' : '' }} masquée{{ offers.length - visibleOffers.length > 1 ? 's' : '' }}
-            </p>
-          </div>
-
-          <p v-else class="text-sm text-muted-foreground py-4 text-center">
-            Aucune offre disponible pour le moment.
-          </p>
-        </section>
+        <!-- Où acheter : offres directes et monétisables uniquement -->
+        <WhereToBuy :shoe-id="shoe.id" :shoe-label="`${shoe.brand} ${shoe.model}`" />
 
         <!-- CTA -->
         <div class="flex flex-col gap-3 pt-2">

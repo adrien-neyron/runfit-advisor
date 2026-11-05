@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ArrowLeft, Pencil, LogOut, Heart, Sparkles, CircleDashed } from 'lucide-vue-next'
+import { ArrowLeft, Pencil, LogOut, Heart, Sparkles, CircleDashed, Check } from 'lucide-vue-next'
 import { shoes } from '~/data/shoes'
 import { getRecommendations } from '~/data/products'
 
@@ -9,11 +9,16 @@ const authStore    = useAuthStore()
 const profileStore = useUserProfileStore()
 const matchesStore = useMatchesStore()
 const shoesStore   = useShoesStore()
+const { fetchLivePrices } = useShoeOffers()
+
+// Prix réels (offres vérifiées < 7 jours). Pas de prix catalogue affiché : il peut être périmé.
+const livePrices = ref<Record<string, number>>({})
 
 const modalOpen           = ref(false)
 const enrichmentModalOpen = ref(false)
 
 onMounted(() => shoesStore.fetchShoes())
+
 
 watchEffect(() => {
   if (user.value === null && !profileStore.loading) {
@@ -25,7 +30,7 @@ watchEffect(() => {
 
 const LABELS: Record<string, Record<string, string>> = {
   sexe:            { homme: 'Homme', femme: 'Femme' },
-  foulee:          { pronateur: 'Pronateur', neutre: 'Neutre', supinateur: 'Supinateur' },
+  foulee:          { pronateur: 'Pronateur', hyperpronateur: 'Hyperpronateur', neutre: 'Neutre', supinateur: 'Supinateur' },
   niveau:          { débutant: 'Débutant', intermédiaire: 'Intermédiaire', avancé: 'Avancé' },
   distance:        { '5km': '5 km', '10km': '10 km', semi: 'Semi-marathon', marathon: 'Marathon', ultra: 'Ultra' },
   terrain:         { route: 'Route', trail: 'Trail', mixte: 'Mixte' },
@@ -87,7 +92,28 @@ const matchedShoes = computed(() =>
 const recommendations = computed(() => {
   if (!profileStore.profile) return []
   const source = shoesStore.dbProducts.length > 0 ? shoesStore.dbProducts : undefined
-  return getRecommendations(profileStore.profile, 3, source)
+  return getRecommendations(profileStore.profile, 3, source, livePrices.value)
+})
+
+// Prix réels de tout le catalogue en une requête (sert à l'affichage et au filtre budget)
+watch(() => shoesStore.dbProducts.length, async (n) => {
+  if (!n) return
+  livePrices.value = await fetchLivePrices(shoesStore.dbProducts.map((p) => p.id))
+}, { immediate: true })
+const withdrawHealthConsent = async () => {
+  if (!profileStore.profile) return
+  await profileStore.saveProfile({ ...profileStore.profile, blessures: 'non', healthConsent: false, healthConsentAt: null })
+}
+const consentDate = computed(() => {
+  const d = profileStore.profile?.healthConsentAt
+  return d ? new Date(d).toLocaleDateString('fr-FR') : null
+})
+const formatLive = (n: number) => `${n.toLocaleString('fr-FR', { maximumFractionDigits: 2 })} €`
+
+useSeoMeta({
+  title: 'Mon profil — RunMatch',
+  description: 'Gère ton profil de coureur et tes préférences.',
+  robots: 'noindex, nofollow',
 })
 </script>
 
@@ -96,13 +122,10 @@ const recommendations = computed(() => {
     <!-- Nav -->
     <nav class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div class="container flex items-center justify-between h-16">
-        <button
-          class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          @click="router.push('/')"
-        >
+        <NuxtLink to="/" class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <ArrowLeft class="w-4 h-4" />
           Accueil
-        </button>
+        </NuxtLink>
         <span class="text-xl font-black tracking-tighter">
           RUN<span class="text-gradient">MATCH</span>
         </span>
@@ -145,7 +168,7 @@ const recommendations = computed(() => {
         </div>
 
         <div v-else-if="!profileStore.profile" class="rounded-2xl border border-border bg-card p-8 text-center space-y-4">
-          <p class="text-muted-foreground text-sm">Vous n'avez pas encore rempli le questionnaire.</p>
+          <p class="text-muted-foreground text-sm">Tu n'as pas encore rempli le questionnaire.</p>
           <UiButton @click="modalOpen = true">Remplir le questionnaire</UiButton>
         </div>
 
@@ -169,7 +192,7 @@ const recommendations = computed(() => {
         >
           <div class="flex items-start gap-3 mb-3">
             <div class="w-8 h-8 rounded-full bg-primary/15 flex items-center justify-center shrink-0 mt-0.5">
-              <CircleDashed class="w-4 h-4 text-primary" />
+              <CircleDashed class="w-4 h-4 text-brand" />
             </div>
             <div class="flex-1 min-w-0">
               <p class="font-bold text-sm">Affiner tes recommandations</p>
@@ -177,7 +200,7 @@ const recommendations = computed(() => {
                 {{ missingFieldsDisplay.length }} question{{ missingFieldsDisplay.length > 1 ? 's' : '' }} pour de meilleurs résultats
               </p>
             </div>
-            <span class="text-xs font-bold text-primary">
+            <span class="text-xs font-bold text-brand">
               {{ profileStore.enrichmentProgress }}%
             </span>
           </div>
@@ -218,15 +241,12 @@ const recommendations = computed(() => {
       >
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-            <Heart class="w-3.5 h-3.5 text-primary" />
+            <Heart class="w-3.5 h-3.5 text-brand" />
             Mes matchs
           </h2>
-          <button
-            class="text-xs text-primary font-medium hover:underline"
-            @click="router.push('/matches')"
-          >
+          <NuxtLink to="/matches" class="text-xs text-brand font-medium hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             Voir tout →
-          </button>
+          </NuxtLink>
         </div>
 
         <!-- Scroll horizontal -->
@@ -234,8 +254,7 @@ const recommendations = computed(() => {
           <article
             v-for="shoe in matchedShoes"
             :key="shoe!.id"
-            class="flex-shrink-0 w-32 bg-card border border-border rounded-2xl overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group"
-            @click="router.push(`/shoes/${shoe!.slug}`)"
+            class="flex-shrink-0 w-32 bg-card border border-border rounded-2xl overflow-hidden cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group relative"
           >
             <div class="aspect-square bg-gradient-to-br from-secondary/80 to-secondary/30 overflow-hidden">
               <ShoeImage
@@ -246,13 +265,37 @@ const recommendations = computed(() => {
               />
             </div>
             <div class="p-2">
-              <p class="text-[9px] text-muted-foreground uppercase tracking-wide truncate">{{ shoe!.brand }}</p>
-              <p class="text-xs font-bold leading-tight line-clamp-2 mt-0.5">{{ shoe!.model }}</p>
-              <p class="text-primary font-bold text-xs mt-1">{{ shoe!.prix }} €</p>
+              <p class="text-xs text-muted-foreground uppercase tracking-wide truncate">{{ shoe!.brand }}</p>
+              <p class="text-xs font-bold leading-tight line-clamp-2 mt-0.5">
+                <NuxtLink
+                  :to="`/shoes/${shoe!.slug ?? shoe!.id}`"
+                  class="after:absolute after:inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded"
+                  :aria-label="`Voir la fiche de ${shoe!.brand} ${shoe!.model}`"
+                >{{ shoe!.model }}</NuxtLink>
+              </p>
+              <p v-if="livePrices[shoe!.id] != null" class="text-brand font-bold text-xs mt-1">dès {{ formatLive(livePrices[shoe!.id]) }}</p>
             </div>
           </article>
         </div>
       </section>
+
+      <!-- ── DONNÉES DE SANTÉ ───────────────────────────────────────────────── -->
+      <section v-if="profileStore.profile" aria-labelledby="health-title" class="rounded-2xl border border-border bg-card p-4" data-id="health-consent-status">
+        <h2 id="health-title" class="text-sm font-black mb-1">Données de santé</h2>
+        <template v-if="profileStore.profile.healthConsent">
+          <p class="text-xs text-muted-foreground leading-relaxed">
+            Vous avez consenti{{ consentDate ? ` le ${consentDate}` : '' }} au traitement de votre réponse sur les blessures,
+            utilisée uniquement pour ajuster le soutien des chaussures proposées.
+          </p>
+          <UiButton class="mt-3" variant="outline" size="sm" @click="withdrawHealthConsent">Retirer mon consentement</UiButton>
+        </template>
+        <p v-else class="text-xs text-muted-foreground leading-relaxed">
+          Aucune donnée de santé n'est enregistrée. Vous pourrez y consentir en refaisant le questionnaire.
+        </p>
+      </section>
+
+      <!-- ── MON ÉQUIPEMENT ──────────────────────────────────────────────────── -->
+      <MyGear v-if="user" />
 
       <!-- ── RECOMMANDATIONS ─────────────────────────────────────────────────── -->
       <section
@@ -263,15 +306,12 @@ const recommendations = computed(() => {
       >
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-xs font-semibold uppercase tracking-widest text-muted-foreground flex items-center gap-1.5">
-            <Sparkles class="w-3.5 h-3.5 text-primary" />
+            <Sparkles class="w-3.5 h-3.5 text-brand" />
             Recommandations
           </h2>
-          <button
-            class="text-xs text-primary font-medium hover:underline"
-            @click="router.push('/resultats')"
-          >
+          <NuxtLink to="/resultats" class="text-xs text-brand font-medium hover:underline rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
             Voir tout →
-          </button>
+          </NuxtLink>
         </div>
 
         <div class="space-y-3">
@@ -281,8 +321,7 @@ const recommendations = computed(() => {
             v-motion
             :initial="{ opacity: 0, x: -12 }"
             :enter="{ opacity: 1, x: 0, transition: { delay: 180 + i * 60, duration: 300 } }"
-            class="bg-card border border-border rounded-2xl overflow-hidden flex gap-0 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group"
-            @click="router.push(`/shoes/${rec.product.id}`)"
+            class="bg-card border border-border rounded-2xl overflow-hidden flex gap-0 cursor-pointer hover:border-primary/40 hover:shadow-md transition-all group relative"
           >
             <!-- Image -->
             <div class="w-24 flex-shrink-0 bg-gradient-to-br from-secondary/80 to-secondary/30">
@@ -298,26 +337,32 @@ const recommendations = computed(() => {
             <div class="flex-1 p-3 min-w-0">
               <div class="flex items-start justify-between gap-2">
                 <div class="min-w-0">
-                  <p class="text-[10px] text-muted-foreground uppercase tracking-wide">{{ rec.product.brand }}</p>
-                  <h3 class="text-sm font-black leading-tight truncate">{{ rec.product.model }}</h3>
+                  <p class="text-xs text-muted-foreground uppercase tracking-wide">{{ rec.product.brand }}</p>
+                  <h3 class="text-sm font-black leading-tight truncate">
+                    <NuxtLink
+                      :to="`/shoes/${rec.product.id}`"
+                      class="after:absolute after:inset-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary rounded"
+                      :aria-label="`Voir la fiche de ${rec.product.brand} ${rec.product.model}`"
+                    >{{ rec.product.model }}</NuxtLink>
+                  </h3>
                 </div>
                 <!-- Score -->
                 <div class="flex-shrink-0 flex flex-col items-center bg-primary/10 rounded-xl px-2 py-1">
-                  <span class="text-base font-black text-primary leading-none">{{ rec.score }}</span>
-                  <span class="text-[8px] text-muted-foreground leading-none mt-0.5">pts</span>
+                  <span class="text-base font-black text-brand leading-none">{{ rec.percent }}%</span>
+                  <span class="text-xs text-muted-foreground leading-none mt-0.5">match</span>
                 </div>
               </div>
 
-              <p class="text-primary font-bold text-xs mt-1.5">{{ rec.product.prix }} €</p>
+              <p v-if="livePrices[rec.product.id] != null" class="text-brand font-bold text-xs mt-1.5">dès {{ formatLive(livePrices[rec.product.id]) }}</p>
 
               <!-- Raisons -->
               <ul class="mt-2 space-y-0.5">
                 <li
                   v-for="reason in rec.reasons.slice(0, 2)"
                   :key="reason"
-                  class="text-[10px] text-muted-foreground leading-tight flex items-start gap-1"
+                  class="text-xs text-muted-foreground leading-tight flex items-start gap-1"
                 >
-                  <span class="text-primary mt-0.5 flex-shrink-0">✓</span>
+                  <Check class="w-3.5 h-3.5 text-brand mt-0.5 flex-shrink-0" aria-hidden="true" />
                   {{ reason }}
                 </li>
               </ul>
@@ -335,7 +380,7 @@ const recommendations = computed(() => {
         class="text-center"
       >
         <p class="text-sm text-muted-foreground mb-3">
-          Remplissez le questionnaire pour obtenir vos recommandations personnalisées.
+          Remplis le questionnaire pour obtenir tes recommandations personnalisées.
         </p>
         <UiButton variant="hero" @click="modalOpen = true">
           <Sparkles class="w-4 h-4 mr-2" />

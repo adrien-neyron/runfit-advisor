@@ -5,7 +5,7 @@
 // d'affiliation (AWIN, CJ, flux maison).
 //
 // Colonnes attendues (insensible à la casse) :
-//   id / product_id / ean
+//   id / product_id / ean   (Awin : merchant_product_id, aw_product_id)
 //   brand / manufacturer
 //   title / name / model
 //   price / sale_price
@@ -36,6 +36,36 @@ function parseStockStatus(raw: string): StockStatus {
   return 'unknown'
 }
 
+/** Convertit une ligne CSV en produit normalisé (null si la ligne est inexploitable). */
+export function normalizeCsvRow(row: Record<string, string>): NormalizedProductFeedItem | null {
+  const id = col(row, 'merchant_product_id', 'aw_product_id', 'id', 'product_id', 'ean', 'sku', 'reference')
+  const brand = col(row, 'brand_name', 'brand', 'manufacturer', 'marque')
+  const model = col(row, 'product_name', 'title', 'name', 'model', 'nom', 'libelle')
+  const priceRaw = col(row, 'search_price', 'price', 'sale_price', 'store_price', 'prix', 'tarif')
+  const price = parseFloat(priceRaw.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0
+  // Awin : merchant_deep_link = URL propre du marchand (le redirecteur ajoute lui-même le suivi Awin)
+  const productUrl = col(row, 'merchant_deep_link', 'aw_deep_link', 'product_url', 'url', 'link', 'lien')
+  const imageUrl = col(row, 'aw_image_url', 'merchant_image_url', 'image_url', 'image', 'image_link', 'photo') || undefined
+  const stockRaw = col(row, 'in_stock', 'stock_status', 'availability', 'instock', 'disponible', 'stock')
+
+  if (!id || !productUrl || price === 0) return null
+
+
+  return {
+    externalProductId: id,
+    brand: brand || 'Unknown',
+    model: model || id,
+    price,
+    currency: col(row, 'currency', 'devise') || 'EUR',
+    productUrl,
+    imageUrl,
+    stockStatus: parseStockStatus(stockRaw),
+    category: col(row, 'merchant_category', 'category_name', 'product_type', 'category') || undefined,
+    description: col(row, 'description', 'short_description') || undefined,
+    raw: row,
+  }
+}
+
 // ── Parser principal ─────────────────────────────────────────────────────────
 
 /**
@@ -61,31 +91,9 @@ export function parseCsvFeed(csvContent: string): NormalizedProductFeedItem[] {
   }
 
   const results: NormalizedProductFeedItem[] = []
-
   for (const row of rows) {
-    const id = col(row, 'id', 'product_id', 'ean', 'sku', 'reference')
-    const brand = col(row, 'brand', 'manufacturer', 'marque')
-    const model = col(row, 'title', 'name', 'model', 'nom', 'libelle')
-    const priceRaw = col(row, 'price', 'sale_price', 'prix', 'tarif')
-    const price = parseFloat(priceRaw.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0
-    const productUrl = col(row, 'product_url', 'url', 'link', 'lien')
-    const imageUrl = col(row, 'image_url', 'image', 'image_link', 'photo') || undefined
-    const stockRaw = col(row, 'stock_status', 'availability', 'instock', 'disponible', 'stock')
-
-    if (!id || !productUrl || price === 0) continue
-
-    results.push({
-      externalProductId: id,
-      brand: brand || 'Unknown',
-      model: model || id,
-      price,
-      currency: col(row, 'currency', 'devise') || 'EUR',
-      productUrl,
-      imageUrl,
-      stockStatus: parseStockStatus(stockRaw),
-      description: col(row, 'description', 'short_description') || undefined,
-      raw: row,
-    })
+    const item = normalizeCsvRow(row)
+    if (item) results.push(item)
   }
 
   return results

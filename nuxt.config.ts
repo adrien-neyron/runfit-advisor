@@ -12,18 +12,42 @@ export default defineNuxtConfig({
     experimental: {
       tasks: true,
     },
-    // Tâche planifiée : sync des flux marchands tous les jours à 03:00
+    // Tâches planifiées : flux marchands chaque lundi à 03:00 (UTC), import des ventes Awin chaque jour à 04:00
     scheduledTasks: {
-      '0 3 * * *': ['syncFeeds'],
+      '0 3 * * 1': ['syncFeeds'],
+      '0 4 * * *': ['syncConversions'],
+    },
+    // ─── Headers de sécurité globaux ────────────────────────────
+    // Appliqués à toutes les routes par Nitro (et donc Vercel edge)
+    routeRules: {
+      '/**': {
+        headers: {
+          'X-Frame-Options': 'DENY',
+          'X-Content-Type-Options': 'nosniff',
+          'Referrer-Policy': 'strict-origin-when-cross-origin',
+          'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
+          'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
+        },
+      },
     },
   },
 
   // Variables serveur accessibles dans les routes API
+  // ⚠️ Ces clés ne sont JAMAIS exposées au client (server-only)
   runtimeConfig: {
     supabaseServiceKey:   process.env.SUPABASE_SERVICE_ROLE_KEY ?? '',
     adminEmails:          process.env.ADMIN_EMAILS ?? '',
     amazonPaAccessKey:    process.env.AMAZON_PA_ACCESS_KEY ?? '',
     amazonPaSecretKey:    process.env.AMAZON_PA_SECRET_KEY ?? '',
+    // Awin : publisher ID (l'ID annonceur est dans merchants.affiliate_tag)
+    awinPublisherId:      process.env.AWIN_PUBLISHER_ID ?? '',
+    // public.* est exposé au client — uniquement pour les valeurs non sensibles
+    public: {
+      siteUrl:        process.env.NUXT_PUBLIC_SITE_URL ?? 'http://localhost:3000',
+      amazonTrackingId: process.env.AMAZON_TRACKING_ID ?? '',
+      // Indicateur d'env (utile pour afficher un bandeau en staging)
+      env:            process.env.VERCEL_ENV ?? process.env.NODE_ENV ?? 'development',
+    },
   },
 
   modules: [
@@ -49,6 +73,7 @@ export default defineNuxtConfig({
         '/shoes/**',
         '/confidentialite',
         '/connexion',
+        '/mot-de-passe',
         '/confirm',
         '/admin/**', // Auth admin gérée par middleware/admin.ts
       ],
@@ -59,13 +84,14 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'RunMatch — Trouvez votre chaussure de running idéale',
+      htmlAttrs: { lang: 'fr' },
+      title: 'RunMatch — Trouve ta chaussure de running idéale',
       meta: [
         { charset: 'utf-8' },
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         {
           name: 'description',
-          content: 'Trouvez la chaussure de running parfaite pour votre profil en 2 minutes.',
+          content: 'Trouve la chaussure de running parfaite pour ton profil en 2 minutes.',
         },
       ],
       link: [

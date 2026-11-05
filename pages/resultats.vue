@@ -1,34 +1,71 @@
 <script setup lang="ts">
 import { ArrowLeft, ShoppingBag, Share2, RotateCcw, Sparkles, ExternalLink } from 'lucide-vue-next'
 import { getRecommendations, type Recommendation } from '~/data/products'
-import type { BestOffer } from '~/composables/useMerchants'
+import type { ShoeOffer } from '~/composables/useShoeOffers'
 
 const router = useRouter()
 const user = useSupabaseUser()
 const profileStore = useUserProfileStore()
 const shoesStore = useShoesStore()
-const { fetchBestOffers, buildAffiliateRedirectUrl } = useMerchants()
+const matchesStore = useMatchesStore()
+const { fetchAvailableShoeIds, fetchOffers, fetchLivePrices, bestOf, withSrc } = useShoeOffers()
 const { toast } = useToast()
 
 const recommendations = ref<Recommendation[]>([])
-const bestOffers = ref<Map<string, BestOffer>>(new Map())
-const redirect = ref<{ merchant: string; url: string; productId: string; model: string } | null>(null)
+const bestOffers = ref<Map<string, ShoeOffer>>(new Map())
+// Toutes les offres (une par marchand) : un modèle vendu chez deux marchands affiche les deux
+const allOffers = ref<Map<string, ShoeOffer[]>>(new Map())
 
 onMounted(() => shoesStore.fetchShoes())
 
-// Calcule les recommandations quand le profil est disponible
+// Coups de cœur du swipe : toujours affichés dans les résultats, du plus récent au plus ancien
+const likedProducts = computed(() =>
+  [...matchesStore.likedShoes]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map((m) => shoesStore.dbProducts.find((p) => p.id === m.shoeId))
+    .filter((p): p is NonNullable<typeof p> => !!p),
+)
+
+// Offres des coups de cœur (fusionnées avec celles des recommandations)
+watch(
+  () => likedProducts.value.map((p) => p.id).join(','),
+  async (joined) => {
+    const ids = joined ? joined.split(',').filter((id) => !allOffers.value.has(id)) : []
+    if (!ids.length) return
+    const offers = await fetchOffers(ids)
+    const next = new Map(allOffers.value)
+    for (const id of ids) if (offers.get(id)?.length) next.set(id, offers.get(id)!)
+    allOffers.value = next
+  },
+  { immediate: true },
+)
+
+// Calcule les recommandations quand le profil est disponible.
+// On ne recommande que des chaussures pour lesquelles un lien d'achat direct existe :
+// chaque suggestion peut ainsi mener à un achat.
 watch(
   () => profileStore.profile,
   async (profile) => {
     if (!profile) return
-    const source = shoesStore.dbProducts.length > 0 ? shoesStore.dbProducts : undefined
-    const recs = getRecommendations(profile, 3, source)
+    const base = shoesStore.dbProducts
+    const available = await fetchAvailableShoeIds() // null si indisponible → pas de filtre
+    const withOffers = available ? base.filter((p) => available.has(p.id)) : base
+    const source = withOffers.length > 0 ? withOffers : base
+    // Budget évalué sur les prix réels quand ils existent
+    const livePrices = profile.budget ? await fetchLivePrices(source.map((p) => p.id)) : {}
+    const recs = getRecommendations(profile, 3, source, livePrices)
     recommendations.value = recs
 
-    // Charge les meilleures offres affiliées en une seule requête batch
+    // Offres de ces chaussures en une seule requête (la première est la meilleure)
     const ids = recs.map((r) => r.product.id)
-    const labels = new Map(recs.map((r) => [r.product.id, `${r.product.brand} ${r.product.model}`]))
-    bestOffers.value = await fetchBestOffers(ids, labels)
+    const offers = await fetchOffers(ids)
+    allOffers.value = new Map(ids.flatMap((id) => (offers.get(id)?.length ? [[id, offers.get(id)!] as [string, ShoeOffer[]]] : [])))
+    bestOffers.value = new Map(
+      ids.flatMap((id) => {
+        const best = bestOf(offers.get(id))
+        return best ? [[id, best] as [string, ShoeOffer]] : []
+      }),
+    )
   },
   { immediate: true },
 )
@@ -42,69 +79,63 @@ watch(
   { immediate: true },
 )
 
-const handleBuy = (productId: string, model: string) => {
-  const offer = bestOffers.value.get(productId)
 
-  if (!offer) {
-    router.push(`/shoes/${productId}`)
-    return
+// Partage : on partage le lien de l'application, jamais le profil (données personnelles / de santé)
+const shareResults = async () => {
+  const shareData = {
+    title: 'RunMatch — Trouve ta chaussure de running idéale',
+    text: "J'ai trouvé mes chaussures de running avec RunMatch. Essaie, ça prend 2 minutes.",
+    url: window.location.origin,
   }
-
-  // URL de l'endpoint serveur : tracking + tag affilié garantis
-  const url = buildAffiliateRedirectUrl(productId, offer.merchant)
-  redirect.value = { merchant: offer.merchant, url, productId, model }
+  try {
+    if (navigator.share) {
+      await navigator.share(shareData)
+      return
+    }
+    await navigator.clipboard.writeText(shareData.url)
+    toast({ title: 'Lien copié', description: 'Colle-le où tu veux pour partager RunMatch.', type: 'success' })
+  } catch (err) {
+    // Fermeture de la feuille de partage par l'utilisateur : rien à signaler
+    if ((err as DOMException)?.name === 'AbortError') return
+    toast({ title: 'Partage impossible', description: `Copie ce lien à la main : ${shareData.url}`, type: 'error', duration: 10000 })
+  }
 }
 
-const confirmRedirect = () => {
-  if (!redirect.value) return
-  // Le tracking est géré côté serveur dans /api/affiliate/:merchant/:shoeId
-  window.open(redirect.value.url, '_blank', 'noopener,noreferrer')
-  redirect.value = null
-}
+// Sans offre directe : fiche du modèle
+const goToProduct = (productId: string) => router.push(`/shoes/${productId}`)
 
 // Score ring helper
-const scorePercent = (score: number) => Math.min(100, Math.round((score / 90) * 100))
+const scorePercent = (percent: number) => Math.max(0, Math.min(100, Math.round(percent)))
 
-// Label du bouton d'achat
-// On n'affiche pas le prix stocké en DB — il peut être obsolète (scraping > 24h).
-// Le marchand affiche le prix réel au moment du clic.
+// Label du bouton d'achat.
+// Pas de promesse de « meilleur prix » : on n'affiche pas de prix (potentiellement périmé),
+// le marchand affiche le prix réel au moment du clic.
 const buyLabel = (productId: string) => {
   const offer = bestOffers.value.get(productId)
-  if (!offer) return 'Voir le meilleur prix'
-  return `Voir le meilleur prix chez ${offer.merchant}`
+  if (!offer) return 'Voir la fiche'
+  return `Voir l'offre chez ${offer.merchantName}`
 }
+
+useSeoMeta({
+  title: 'Mes recommandations — RunMatch',
+  description: 'Les chaussures de running recommandées pour ton profil de coureur.',
+  robots: 'noindex, nofollow',
+})
 </script>
 
 <template>
-  <div class="min-h-screen bg-background" role="main">
+  <div class="min-h-screen bg-background">
     <ToastContainer />
-
-    <!-- Dialog de redirection -->
-    <Teleport v-if="redirect" to="body">
-      <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="redirect = null" />
-        <div class="relative bg-card rounded-2xl shadow-2xl p-6 max-w-sm w-full z-10">
-          <h3 class="font-black text-lg mb-2">Redirection vers {{ redirect.merchant }}</h3>
-          <p class="text-sm text-muted-foreground mb-5">
-            Vous allez être redirigé vers le site partenaire pour finaliser votre achat.
-          </p>
-          <div class="flex gap-3">
-            <UiButton variant="outline" class="flex-1" @click="redirect = null">Annuler</UiButton>
-            <UiButton variant="hero" class="flex-1" @click="confirmRedirect">Continuer</UiButton>
-          </div>
-        </div>
-      </div>
-    </Teleport>
 
     <!-- Nav -->
     <div class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div class="container flex items-center justify-between h-16">
-        <UiButton variant="ghost" size="icon" aria-label="Retour au questionnaire" @click="router.push('/questionnaire')">
+        <UiButton variant="ghost" size="icon" aria-label="Retour au questionnaire" to="/questionnaire">
           <ArrowLeft class="w-5 h-5" />
         </UiButton>
         <span class="font-black tracking-tighter">RUN<span class="text-gradient">MATCH</span></span>
-        <UiButton variant="ghost" size="icon" aria-label="Partager les résultats">
-          <Share2 class="w-5 h-5" />
+        <UiButton variant="ghost" size="icon" aria-label="Partager RunMatch" @click="shareResults">
+          <Share2 class="w-5 h-5" aria-hidden="true" />
         </UiButton>
       </div>
     </div>
@@ -124,7 +155,7 @@ const buyLabel = (productId: string) => {
           class="text-center mb-12"
         >
           <h1 class="text-3xl md:text-5xl font-black tracking-tight mb-3">
-            Vos <span class="text-gradient">recommandations</span>
+            Tes <span class="text-gradient">recommandations</span>
           </h1>
           <div class="flex flex-wrap justify-center gap-2 mt-4">
             <span
@@ -146,8 +177,8 @@ const buyLabel = (productId: string) => {
 
         <!-- Résultats vides -->
         <div v-if="recommendations.length === 0 && !profileStore.loading" class="text-center py-12">
-          <p class="text-muted-foreground text-lg mb-4">Aucune chaussure ne correspond parfaitement à votre profil.</p>
-          <UiButton variant="hero" @click="router.push('/questionnaire')">
+          <p class="text-muted-foreground text-lg mb-4">Aucune chaussure ne correspond parfaitement à ton profil.</p>
+          <UiButton variant="hero" to="/questionnaire">
             <RotateCcw class="w-4 h-4" />
             Recommencer
           </UiButton>
@@ -165,16 +196,16 @@ const buyLabel = (productId: string) => {
           >
             <div class="flex flex-col md:flex-row">
               <!-- Image -->
-              <div class="md:w-2/5 relative overflow-hidden bg-secondary">
+              <div class="md:w-2/5 relative overflow-hidden bg-white">
                 <ShoeImage
-                  :src="rec.product.image"
+                  :src="bestOffers.get(rec.product.id)?.imageUrl || rec.product.image"
                   :alt="`${rec.product.brand} ${rec.product.model}`"
-                  class="w-full h-56 md:h-full object-contain p-4 hover:scale-105 transition-transform duration-500"
+                  class="w-full h-56 md:h-full object-contain p-4 hover:scale-105 transition-transform duration-500 mix-blend-multiply [filter:brightness(1.04)_contrast(1.03)]"
                   loading="lazy"
                 />
                 <div
                   v-if="i === 0"
-                  class="absolute top-4 left-4 px-3 py-1 rounded-full accent-gradient text-white text-xs font-bold"
+                  class="absolute top-4 left-4 px-3 py-1 rounded-full accent-gradient text-primary-foreground text-xs font-bold"
                 >
                   MEILLEUR MATCH
                 </div>
@@ -195,16 +226,16 @@ const buyLabel = (productId: string) => {
                         <circle
                           cx="18" cy="18" r="15.9" fill="none"
                           stroke="hsl(var(--primary))" stroke-width="2.8"
-                          stroke-dasharray="100" :stroke-dashoffset="100 - scorePercent(rec.score)"
+                          stroke-dasharray="100" :stroke-dashoffset="100 - scorePercent(rec.percent)"
                           stroke-linecap="round"
                           style="transition: stroke-dashoffset 0.5s ease"
                         />
                       </svg>
-                      <span class="absolute inset-0 flex items-center justify-center text-[10px] font-black">
-                        {{ scorePercent(rec.score) }}%
+                      <span class="absolute inset-0 flex items-center justify-center text-xs font-black">
+                        {{ scorePercent(rec.percent) }}%
                       </span>
                     </div>
-                    <span class="text-[9px] font-medium text-muted-foreground uppercase tracking-wide leading-none">
+                    <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide leading-none">
                       Compatibilité
                     </span>
                   </div>
@@ -228,43 +259,100 @@ const buyLabel = (productId: string) => {
                   </div>
                 </div>
 
-                <!-- Raisons -->
-                <div class="space-y-2 mb-6">
-                  <div v-for="reason in rec.reasons" :key="reason" class="flex items-center gap-2 text-sm">
-                    <span class="w-1.5 h-1.5 rounded-full accent-gradient flex-shrink-0" aria-hidden="true" />
-                    <span>{{ reason }}</span>
-                  </div>
-                </div>
+                <!-- Pourquoi ce match -->
+                <WhyMatch class="mb-6" :reasons="rec.reasons" :cautions="rec.cautions" />
 
                 <!-- Actions -->
-                <div class="mt-auto flex gap-3">
-                  <UiButton
-                    variant="hero"
-                    class="flex-1 gap-2 truncate"
-                    @click="handleBuy(rec.product.id, rec.product.model)"
+                <div class="mt-auto flex flex-wrap gap-3">
+                  <a
+                    v-for="(offer, k) in allOffers.get(rec.product.id) ?? []"
+                    :key="offer.merchantSlug"
+                    :href="withSrc(offer.redirectUrl, 'resultats')"
+                    target="_blank"
+                    rel="nofollow sponsored noopener noreferrer"
+                    class="flex-1 min-w-[10rem] inline-flex items-center justify-center gap-2 truncate h-11 px-6 rounded-xl text-base font-bold hover:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-opacity"
+                    :class="k === 0 ? 'accent-gradient text-primary-foreground shadow-md' : 'border-2 border-border hover:bg-secondary'"
+                    :aria-label="`Voir l'offre chez ${offer.merchantName} pour ${rec.product.model} (s'ouvre dans un nouvel onglet)`"
                   >
-                    <ExternalLink class="w-4 h-4 shrink-0" />
-                    <span class="truncate">{{ buyLabel(rec.product.id) }}</span>
-                  </UiButton>
+                    <ExternalLink class="w-4 h-4 shrink-0" aria-hidden="true" />
+                    <span class="truncate">Voir l'offre chez {{ offer.merchantName }}</span>
+                  </a>
+                  <NuxtLink
+                    :to="`/shoes/${rec.product.id}`"
+                    class="inline-flex items-center justify-center h-11 px-6 rounded-xl text-base font-bold border-2 border-border hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                    :class="allOffers.get(rec.product.id)?.length ? '' : 'flex-1'"
+                    :aria-label="`Voir la fiche de ${rec.product.brand} ${rec.product.model}`"
+                  >
+                    Voir la fiche
+                  </NuxtLink>
                 </div>
               </div>
             </div>
           </article>
         </div>
 
+        <!-- Coups de cœur du swipe -->
+        <section v-if="likedProducts.length" class="mt-12" aria-labelledby="coups-de-coeur-title">
+          <h2 id="coups-de-coeur-title" class="text-xl font-black tracking-tight mb-1">Tes coups de cœur</h2>
+          <p class="text-sm text-muted-foreground mb-4">Les chaussures que tu as aimées en swipant.</p>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <article
+              v-for="shoe in likedProducts"
+              :key="shoe.id"
+              class="bg-card rounded-2xl border border-border overflow-hidden"
+              :aria-label="`${shoe.brand} ${shoe.model}`"
+            >
+              <div class="aspect-square bg-white overflow-hidden">
+                <ShoeImage
+                  :src="allOffers.get(shoe.id)?.[0]?.imageUrl || shoe.image"
+                  :alt="`${shoe.brand} ${shoe.model}`"
+                  class="w-full h-full object-contain p-5 mix-blend-multiply [filter:brightness(1.04)_contrast(1.03)]"
+                  loading="lazy"
+                />
+              </div>
+              <div class="p-3 flex flex-col gap-2">
+                <div>
+                  <p class="text-xs text-muted-foreground font-medium uppercase tracking-wider">{{ shoe.brand }}</p>
+                  <h3 class="text-sm font-black leading-tight line-clamp-2 mt-0.5">{{ shoe.model }}</h3>
+                </div>
+                <a
+                  v-for="(offer, k) in allOffers.get(shoe.id) ?? []"
+                  :key="offer.merchantSlug"
+                  :href="withSrc(offer.redirectUrl, 'resultats')"
+                  target="_blank"
+                  rel="nofollow sponsored noopener noreferrer"
+                  class="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                  :class="k === 0 ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border-2 border-border hover:bg-secondary'"
+                  :aria-label="`Voir l'offre chez ${offer.merchantName} pour ${shoe.brand} ${shoe.model} (s'ouvre dans un nouvel onglet)`"
+                >
+                  <ExternalLink class="w-3 h-3 shrink-0" aria-hidden="true" />
+                  <span class="truncate">Voir chez {{ offer.merchantName }}</span>
+                </a>
+                <NuxtLink
+                  :to="`/shoes/${shoe.id}`"
+                  class="w-full flex items-center justify-center rounded-xl py-2.5 text-xs font-black border-2 border-border hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                  :aria-label="`Voir la fiche de ${shoe.brand} ${shoe.model}`"
+                >
+                  Voir la fiche
+                </NuxtLink>
+              </div>
+            </article>
+          </div>
+        </section>
+
         <!-- Mention légale affiliés (obligatoire Amazon Associates) -->
-        <AffiliateDisclosure class="text-center" />
+        <AffiliateDisclosure class="text-center" :offers="[...allOffers.values()].flat()" />
 
         <!-- CTA mode Swipe -->
         <div class="text-center mt-10 space-y-3">
           <div>
-            <UiButton variant="hero" class="gap-2" @click="router.push('/swipe')">
+            <UiButton variant="hero" class="gap-2" to="/swipe">
               <Sparkles class="w-4 h-4" />
               Mode Swipe — Découvrir 15 chaussures
             </UiButton>
-            <p class="text-xs text-muted-foreground mt-2">Swipez pour trouver votre paire idéale</p>
+            <p class="text-xs text-muted-foreground mt-2">Swipe pour trouver ta paire idéale</p>
           </div>
-          <UiButton variant="ghost" @click="router.push('/questionnaire')">
+          <UiButton variant="ghost" to="/questionnaire">
             <RotateCcw class="w-4 h-4" />
             Refaire le questionnaire
           </UiButton>

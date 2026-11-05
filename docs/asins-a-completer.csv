@@ -1,0 +1,15 @@
+shoe_id,brand,model,asin_amazon_fr,commentaire
+brooks-caldera-8,Brooks,Caldera 8,,Colle l'ASIN (10 caractères, ex. B0XXXXXXXX) visible dans l'URL amazon.fr/dp/<ASIN>
+brooks-cascadia-19,Brooks,Cascadia 19,,
+brooks-launch-12,Brooks,Launch 12,,
+asics-gel-cumulus-28,Asics,Gel-Cumulus 28,,Chaussure du catalogue local absente de la base
+asics-gel-nimbus-28,Asics,Gel-Nimbus 28,,Absente de la base
+asics-gel-trabuco-14-gtx,Asics,Gel-Trabuco 14 GTX,,Absente de la base
+asics-gt-1000-14,Asics,GT-1000 14,,Absente de la base
+asics-gt-2000-14,Asics,GT-2000 14,,Absente de la base
+brooks-adrenaline-gts-25,Brooks,Adrenaline GTS 25,,Absente de la base
+brooks-glycerin-23,Brooks,Glycerin 23,,Absente de la base
+brooks-hyperion-3,Brooks,Hyperion 3,,Absente de la base
+nike-air-winflo-12,Nike,Air Winflo 12,,Absente de la base
+nike-pegasus-42,Nike,Pegasus 42,,Absente de la base
+nike-wildhorse-10,Nike,Wildhorse 10,,Absente de la base

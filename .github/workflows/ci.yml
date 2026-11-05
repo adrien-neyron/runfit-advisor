@@ -1,0 +1,77 @@
+name: CI
+
+# Bloque le merge sur main si build/typecheck/lint échoue.
+# La build prod réelle est faite par Vercel — ici on valide la qualité du code.
+
+on:
+  pull_request:
+    branches: [main, dev]
+  push:
+    branches: [dev]
+
+# Évite les runs concurrents sur la même PR
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Lint • Typecheck • Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Lint (ESLint)
+        run: npm run lint --if-present
+
+      - name: Typecheck (Nuxt + TypeScript)
+        run: npm run typecheck --if-present
+
+      - name: Nuxt prepare (.nuxt + types)
+        run: npx nuxt prepare
+
+      - name: Build Nuxt
+        run: npm run build
+        env:
+          # Valeurs factices pour permettre la build en CI
+          # (pas de connexion réelle à Supabase nécessaire pour le build)
+          SUPABASE_URL: https://ci.supabase.co
+          SUPABASE_KEY: ci-fake-anon-key
+          SUPABASE_SERVICE_ROLE_KEY: ci-fake-service-role
+          ADMIN_EMAILS: ci@example.com
+          AMAZON_PA_ACCESS_KEY: ci-fake
+          AMAZON_PA_SECRET_KEY: ci-fake
+          NUXT_PUBLIC_SITE_URL: https://ci.example.com
+
+      - name: Upload build artifact (debug)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuxt-build-logs
+          path: |
+            .nuxt/
+            .output/
+          retention-days: 3
+
+  # Job de garde — empêche un push direct sur main (uniquement via PR)
+  guard-main:
+    name: Guard against direct push on main
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if pushed directly on main
+        run: |
+          echo "::error::Push direct sur main interdit. Utilisez une Pull Request."
+          exit 1

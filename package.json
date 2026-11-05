@@ -8,6 +8,11 @@
     "dev": "nuxt dev --port 3000",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "lint": "eslint . --ext .ts,.js,.vue --max-warnings=0",
+    "lint:fix": "eslint . --ext .ts,.js,.vue --fix",
+    "typecheck": "nuxt typecheck",
+    "ci": "npm run lint && npm run typecheck && npm run build",
     "upload-images": "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY node scripts/scrape-and-upload-images.mjs"
   },
   "dependencies": {
@@ -19,7 +24,7 @@
     "csv-parse": "^6.2.1",
     "fast-xml-parser": "^5.5.9",
     "lucide-vue-next": "^0.462.0",
-    "nuxt": "^3.17.0",
+    "nuxt": "^3.21.11",
     "pg": "^8.20.0",
     "pinia": "^2.3.1",
     "playwright-extra": "^4.3.6",
@@ -31,12 +36,15 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@nuxt/devtools": "latest",
+    "@nuxt/devtools": "^4.0.0-alpha.4",
+    "@nuxt/eslint": "^0.5.7",
     "@tailwindcss/typography": "^0.5.16",
     "autoprefixer": "^10.4.21",
+    "eslint": "^9.13.0",
     "playwright": "^1.49.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "vue-tsc": "^2.1.6"
   }
 }

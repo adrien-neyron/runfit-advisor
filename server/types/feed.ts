@@ -71,6 +71,34 @@ export interface FeedSyncResult {
   itemsRemoved: number
   errorMessage?: string
   durationMs: number
+  /** Mode simulation : correspondances proposées, rien n'est écrit en base */
+  preview?: FeedMatchPreview[]
+  /** Mode simulation : quelques produits de marques du catalogue restés sans correspondance */
+  unmatchedSample?: string[]
+  /** Mode simulation : ce que contient réellement le flux (pour comprendre un rapprochement vide) */
+  diagnostics?: FeedDiagnostics
+}
+
+export interface FeedDiagnostics {
+  /** Colonnes reçues dans le flux */
+  columns: string[]
+  /** Lignes avec identifiant, URL et prix exploitables */
+  usableRows: number
+  /** Marques les plus fréquentes dans la colonne marque */
+  topBrands: string[]
+  /** Premiers titres de produits mentionnant une marque du catalogue */
+  sampleTitles: string[]
+}
+
+export interface FeedMatchPreview {
+  shoeId: string
+  /** Variante du lien : homme ou femme */
+  gender?: 'homme' | 'femme'
+  title: string
+  price: number
+  stockStatus: StockStatus
+  productUrl: string
+  imageUrl?: string
 }
 
 // ── Génération de lien affilié ───────────────────────────────────────────────

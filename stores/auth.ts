@@ -13,8 +13,32 @@ export const useAuthStore = defineStore('auth', () => {
     const { error } = await client.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: window.location.origin },
+      options: { emailRedirectTo: `${window.location.origin}/confirm` },
     })
+    return { error }
+  }
+
+  // Renvoie l'email de confirmation d'inscription
+  const resendConfirmation = async (email: string) => {
+    const { error } = await client.auth.resend({
+      type: 'signup',
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/confirm` },
+    })
+    return { error }
+  }
+
+  // Demande d'un lien de réinitialisation (la réponse ne révèle pas si le compte existe)
+  const resetPassword = async (email: string) => {
+    const { error } = await client.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/mot-de-passe`,
+    })
+    return { error }
+  }
+
+  // Définit le nouveau mot de passe (session de récupération ouverte par le lien reçu par email)
+  const updatePassword = async (password: string) => {
+    const { error } = await client.auth.updateUser({ password })
     return { error }
   }
 
@@ -22,5 +46,5 @@ export const useAuthStore = defineStore('auth', () => {
     await client.auth.signOut()
   }
 
-  return { user, signIn, signUp, signOut }
+  return { user, signIn, signUp, resendConfirmation, resetPassword, updatePassword, signOut }
 })

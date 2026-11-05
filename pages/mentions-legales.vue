@@ -13,7 +13,7 @@ useHead({
   <div class="min-h-screen bg-background">
     <div class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div class="container flex items-center h-16">
-        <UiButton variant="ghost" size="icon" aria-label="Retour" @click="router.push('/')">
+        <UiButton variant="ghost" size="icon" aria-label="Retour" to="/">
           <ArrowLeft class="w-5 h-5" />
         </UiButton>
         <span class="ml-4 font-black tracking-tighter">
@@ -24,19 +24,21 @@ useHead({
 
     <div class="container max-w-2xl pt-24 pb-16 px-4 prose prose-sm dark:prose-invert">
       <h1 class="text-3xl font-black">Mentions légales</h1>
-      <p class="text-muted-foreground">Dernière mise à jour : mars 2026</p>
+      <p class="text-muted-foreground">Dernière mise à jour : novembre 2026</p>
 
       <h2 class="text-xl font-black mt-8">Éditeur du site</h2>
       <p>
-        Le site RunMatch est édité à titre personnel.<br />
-        Directeur de publication : Adrien Y.<br />
-        Contact : <a href="/contact" class="text-primary hover:underline">via le formulaire de contact</a>
+        Le site RunMatch est édité par <strong>Adrien Neyron</strong>, à titre individuel.<br />
+        Adresse : 1435 Route de la Barliette, 74300 Arâches-la-Frasse, France.<br />
+        Directeur de la publication : Adrien Neyron.<br />
+        Contact : <a href="mailto:adrien.neyron@gmail.com" class="text-brand hover:underline">adrien.neyron@gmail.com</a>
+        ou <a href="/contact" class="text-brand hover:underline">via le formulaire de contact</a>
       </p>
 
       <h2 class="text-xl font-black mt-6">Hébergement</h2>
       <p>
         Ce site est hébergé par <strong>Vercel Inc.</strong>, 340 Pine Street, Suite 701,
-        San Francisco, CA 94104, États-Unis (<a href="https://vercel.com" target="_blank" rel="noopener noreferrer" class="text-primary hover:underline">vercel.com</a>).<br />
+        San Francisco, CA 94104, États-Unis (<a href="https://vercel.com" target="_blank" rel="noopener noreferrer" class="text-brand hover:underline">vercel.com</a>).<br />
         Les données des utilisateurs sont stockées sur <strong>Supabase</strong>, infrastructure AWS
         Frankfurt (Union Européenne).
       </p>
@@ -55,7 +57,7 @@ useHead({
       <h2 class="text-xl font-black mt-6">Liens d'affiliation</h2>
       <p>
         RunMatch participe à des programmes d'affiliation. Lorsque vous cliquez sur un lien vers
-        un marchand partenaire (Amazon, i-Run, Intersport, etc.) et effectuez un achat, RunMatch
+        un marchand partenaire (Amazon, Deporvillage…) et effectuez un achat, RunMatch
         peut percevoir une commission sans surcoût pour vous.
       </p>
       <p>
@@ -68,7 +70,7 @@ useHead({
       </p>
       <ul>
         <li>Amazon Partenaires (amazon.fr) — tag : <code>runmatch-21</code></li>
-        <li>Réseau AWIN (i-Run, The Running Collective, Courir, Intersport)</li>
+        <li>Réseau Awin (Deporvillage)</li>
       </ul>
 
       <h2 class="text-xl font-black mt-6">Limitation de responsabilité</h2>
@@ -81,7 +83,7 @@ useHead({
       <h2 class="text-xl font-black mt-6">Données personnelles</h2>
       <p>
         Pour toute information relative au traitement de vos données, consultez notre
-        <NuxtLink to="/confidentialite" class="text-primary hover:underline">
+        <NuxtLink to="/confidentialite" class="text-brand hover:underline">
           Politique de confidentialité
         </NuxtLink>.
       </p>
