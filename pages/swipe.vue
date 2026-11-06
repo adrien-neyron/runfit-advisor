@@ -6,21 +6,15 @@ const router = useRouter()
 const profileStore = useUserProfileStore()
 const matchesStore = useMatchesStore()
 const shoesStore = useShoesStore()
-const { fetchAvailableShoeIds, fetchOffers, bestOf } = useShoeOffers()
+const { fetchOffers, bestOf } = useShoeOffers()
 
 // Photos marchand (même source que /resultats et /matches) pour des visuels identiques partout
 const merchantImages = ref<Map<string, string>>(new Map())
 
-// Chaussures avec au moins un lien d'achat direct (null = information indisponible → pas de filtre)
-const availableIds = ref<Set<string> | null>(null)
-
 type Phase = 'intro' | 'swipe' | 'done'
 const phase = ref<Phase>('intro')
 
-onMounted(async () => {
-  shoesStore.fetchShoes()
-  availableIds.value = await fetchAvailableShoeIds()
-})
+onMounted(() => shoesStore.fetchShoes())
 
 watch(
   () => profileStore.loading,
@@ -34,9 +28,8 @@ const deck = computed<SwipeDeckItem[]>(() => {
   const profile = profileStore.profile
   const all = shoesStore.dbProducts
   if (!profile || all.length === 0) return []
-  // Le paquet ne contient que des chaussures achetables ; si le filtre viderait le paquet, on garde tout
-  const withOffers = availableIds.value ? all.filter((p) => availableIds.value!.has(p.id)) : all
-  return buildSwipeDeck(profile, withOffers.length >= 5 ? withOffers : all, 15).map((item) => {
+  // Toutes les chaussures du catalogue, avec ou sans offre d'affiliation
+  return buildSwipeDeck(profile, all, 15).map((item) => {
     const img = merchantImages.value.get(item.shoe.id)
     return img ? { ...item, shoe: { ...item.shoe, image: img } } : item
   })
