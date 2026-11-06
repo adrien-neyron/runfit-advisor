@@ -6,6 +6,7 @@ import type { ShoeOffer } from '~/composables/useShoeOffers'
 const router = useRouter()
 const profileStore = useUserProfileStore()
 const shoesStore = useShoesStore()
+const matchesStore = useMatchesStore()
 const { fetchAvailableShoeIds, fetchOffers, fetchLivePrices, bestOf, withSrc } = useShoeOffers()
 const { toast } = useToast()
 
@@ -15,6 +16,30 @@ const bestOffers = ref<Map<string, ShoeOffer>>(new Map())
 const allOffers = ref<Map<string, ShoeOffer[]>>(new Map())
 
 onMounted(() => shoesStore.fetchShoes())
+
+// Coups de cœur du swipe, avec ou sans offre, du plus récent au plus ancien.
+// Une chaussure déjà recommandée n'est pas répétée : elle figure dans les résultats au-dessus.
+const likedProducts = computed(() => {
+  const recommended = new Set(recommendations.value.map((r) => r.product.id))
+  return [...matchesStore.likedShoes]
+    .sort((a, b) => b.timestamp - a.timestamp)
+    .map((m) => shoesStore.dbProducts.find((p) => p.id === m.shoeId))
+    .filter((p): p is NonNullable<typeof p> => !!p && !recommended.has(p.id))
+})
+
+// Offres des coups de cœur (fusionnées avec celles des recommandations)
+watch(
+  () => likedProducts.value.map((p) => p.id).join(','),
+  async (joined) => {
+    const ids = joined ? joined.split(',').filter((id) => !allOffers.value.has(id)) : []
+    if (!ids.length) return
+    const offers = await fetchOffers(ids)
+    const next = new Map(allOffers.value)
+    for (const id of ids) if (offers.get(id)?.length) next.set(id, offers.get(id)!)
+    allOffers.value = next
+  },
+  { immediate: true },
+)
 
 // Calcule les recommandations quand le profil est disponible.
 // On ne recommande que des chaussures pour lesquelles un lien d'achat direct existe :
@@ -35,7 +60,10 @@ watch(
     // Offres de ces chaussures en une seule requête (la première est la meilleure)
     const ids = recs.map((r) => r.product.id)
     const offers = await fetchOffers(ids)
-    allOffers.value = new Map(ids.flatMap((id) => (offers.get(id)?.length ? [[id, offers.get(id)!] as [string, ShoeOffer[]]] : [])))
+    // Fusion : les offres des coups de cœur sont peut-être déjà chargées
+    const next = new Map(allOffers.value)
+    for (const id of ids) if (offers.get(id)?.length) next.set(id, offers.get(id)!)
+    allOffers.value = next
     bestOffers.value = new Map(
       ids.flatMap((id) => {
         const best = bestOf(offers.get(id))
@@ -268,6 +296,55 @@ useSeoMeta({
             </div>
           </article>
         </div>
+
+        <!-- Coups de cœur du swipe -->
+        <section v-if="likedProducts.length" class="mt-12" aria-labelledby="coups-de-coeur-title">
+          <h2 id="coups-de-coeur-title" class="text-xl font-black tracking-tight mb-1">Tes coups de cœur</h2>
+          <p class="text-sm text-muted-foreground mb-4">Les chaussures que tu as aimées en swipant.</p>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <article
+              v-for="shoe in likedProducts"
+              :key="shoe.id"
+              class="bg-card rounded-2xl border border-border overflow-hidden"
+              :aria-label="`${shoe.brand} ${shoe.model}`"
+            >
+              <div class="aspect-square bg-white overflow-hidden">
+                <ShoeImage
+                  :src="allOffers.get(shoe.id)?.[0]?.imageUrl || shoe.image"
+                  :alt="`${shoe.brand} ${shoe.model}`"
+                  class="w-full h-full object-contain p-5 mix-blend-multiply [filter:brightness(1.04)_contrast(1.03)]"
+                  loading="lazy"
+                />
+              </div>
+              <div class="p-3 flex flex-col gap-2">
+                <div>
+                  <p class="text-xs text-muted-foreground font-medium uppercase tracking-wider">{{ shoe.brand }}</p>
+                  <h3 class="text-sm font-black leading-tight line-clamp-2 mt-0.5">{{ shoe.model }}</h3>
+                </div>
+                <a
+                  v-for="(offer, k) in allOffers.get(shoe.id) ?? []"
+                  :key="offer.merchantSlug"
+                  :href="withSrc(offer.redirectUrl, 'resultats')"
+                  target="_blank"
+                  rel="nofollow sponsored noopener noreferrer"
+                  class="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                  :class="k === 0 ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border-2 border-border hover:bg-secondary'"
+                  :aria-label="`Voir l'offre chez ${offer.merchantName} pour ${shoe.brand} ${shoe.model} (s'ouvre dans un nouvel onglet)`"
+                >
+                  <ExternalLink class="w-3 h-3 shrink-0" aria-hidden="true" />
+                  <span class="truncate">Voir chez {{ offer.merchantName }}</span>
+                </a>
+                <NuxtLink
+                  :to="`/shoes/${shoe.id}`"
+                  class="w-full flex items-center justify-center rounded-xl py-2.5 text-xs font-black border-2 border-border hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                  :aria-label="`Voir la fiche de ${shoe.brand} ${shoe.model}`"
+                >
+                  Voir la fiche
+                </NuxtLink>
+              </div>
+            </article>
+          </div>
+        </section>
 
         <!-- Mention légale affiliés (obligatoire Amazon Associates) -->
         <AffiliateDisclosure class="text-center" :offers="[...allOffers.values()].flat()" />

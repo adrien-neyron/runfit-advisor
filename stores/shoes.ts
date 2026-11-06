@@ -67,8 +67,7 @@ export const useShoesStore = defineStore('shoes', () => {
       .select(
         'id, brand, model, description, prix, foulee, terrain, amorti, drop_mm, poids_g, stabilite, dynamisme, largeur_disponible, niveau, objectif, benefits, image_url, image_url_cdn, offer_count_active, price_min',
       )
-      .eq('is_active', true)
-      .eq('is_available', true)   // uniquement les chaussures avec au moins un lien affilié actif
+      .eq('is_active', true)   // avec ou sans offre : chaque chaussure a sa fiche
       .order('brand')
 
     if (error) {
