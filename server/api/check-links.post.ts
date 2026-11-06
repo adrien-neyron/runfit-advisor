@@ -4,6 +4,8 @@
  * + détecte les pages d'erreur / "produit introuvable".
  */
 
+import { requireAdmin } from '../utils/requireAdmin'
+
 interface LinkToCheck {
   url: string
   brand: string
@@ -11,6 +13,8 @@ interface LinkToCheck {
 }
 
 export default defineEventHandler(async (event) => {
+  await requireAdmin(event)
+
   const body = await readBody<{ links: LinkToCheck[] }>(event)
   const links = (body?.links ?? []).slice(0, 8)
 
