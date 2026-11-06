@@ -221,11 +221,11 @@
 </template>
 
 <script setup lang="ts">
-definePageMeta({ layout: 'admin', middleware: 'admin' })
-
 // Imports explicites : indépendants du préfixe d'auto-import des composants (admin/…)
 import AdminSection from '~/components/admin/Section.vue'
 import StatCard from '~/components/admin/StatCard.vue'
+
+definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 interface Report {
   period: { from: string; to: string }

@@ -1,7 +1,9 @@
 import { defineStore } from 'pinia'
 import type { UserProfile } from '~/data/products'
 
-const SESSION_KEY = 'runmatch-profile'
+// Profil invité : localStorage, pour reprendre le questionnaire d'une session à l'autre.
+// Un utilisateur connecté n'est jamais mis en cache ici : la base est la source de vérité.
+const GUEST_KEY = 'runmatch-profile'
 
 const OPTIONAL_FIELDS: (keyof UserProfile)[] = ['budget', 'voutePlantaire', 'volume']
 
@@ -34,7 +36,23 @@ export const useUserProfileStore = defineStore('userProfile', () => {
   const profile = ref<UserProfile | null>(null)
   const loading = ref(true)
 
-  // Charge depuis la DB si connecté, sinon depuis sessionStorage
+  const readGuestProfile = (): UserProfile | null => {
+    try {
+      const stored = localStorage.getItem(GUEST_KEY)
+      return stored ? (JSON.parse(stored) as UserProfile) : null
+    } catch {
+      return null
+    }
+  }
+  const writeGuestProfile = (p: UserProfile) => {
+    try { localStorage.setItem(GUEST_KEY, JSON.stringify(p)) } catch { /* stockage plein ou bloqué */ }
+  }
+  const clearGuestProfile = () => {
+    try { localStorage.removeItem(GUEST_KEY) } catch { /* ignore */ }
+  }
+
+  // Charge depuis la DB si connecté, sinon depuis le stockage local (invité).
+  // À la première connexion, un profil invité existant est fusionné dans le compte.
   const loadProfile = async () => {
     loading.value = true
 
@@ -50,31 +68,23 @@ export const useUserProfileStore = defineStore('userProfile', () => {
       }
 
       if (data) {
-        const p = toUserProfile(data as Record<string, unknown>)
-        profile.value = p
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(p))
+        // Le profil du compte l'emporte : le brouillon invité devient inutile
+        profile.value = toUserProfile(data as Record<string, unknown>)
+        clearGuestProfile()
       } else {
-        const stored = sessionStorage.getItem(SESSION_KEY)
-        if (stored) profile.value = JSON.parse(stored)
+        const guest = readGuestProfile()
+        if (guest) {
+          // Compte sans profil : on y enregistre celui commencé en invité
+          await saveProfile(guest)
+          clearGuestProfile()
+        }
       }
     } else {
-      const stored = sessionStorage.getItem(SESSION_KEY)
-      if (stored) profile.value = JSON.parse(stored)
+      profile.value = readGuestProfile()
     }
 
     loading.value = false
   }
-
-  // Recharge quand l'utilisateur change.
-  // À la déconnexion : on efface le profil de l'ancien utilisateur (mémoire + onglet) pour
-  // repartir d'un état invité vierge, sans reste de données personnelles ni de santé.
-  watch(user, (newUser, oldUser) => {
-    if (oldUser && !newUser) {
-      sessionStorage.removeItem(SESSION_KEY)
-      profile.value = null
-    }
-    loadProfile()
-  }, { immediate: true })
 
   const saveProfile = async (input: UserProfile) => {
     // Donnée de santé : sans consentement explicite, on ne conserve aucune réponse « blessures »
@@ -85,10 +95,11 @@ export const useUserProfileStore = defineStore('userProfile', () => {
       healthConsent: consent,
       healthConsentAt: consent ? (input.healthConsentAt ?? new Date().toISOString()) : null,
     }
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(p))
     profile.value = p
 
-    if (user.value) {
+    if (!user.value) {
+      writeGuestProfile(p)
+    } else {
       await (supabase.from('user_profiles') as any).upsert(
         {
           user_id: user.value.id,
@@ -114,6 +125,17 @@ export const useUserProfileStore = defineStore('userProfile', () => {
       )
     }
   }
+
+  // Recharge quand l'utilisateur change.
+  // À la déconnexion : on efface le profil de l'ancien utilisateur (mémoire + appareil) pour
+  // repartir d'un état invité vierge, sans reste de données personnelles ni de santé.
+  watch(user, (newUser, oldUser) => {
+    if (oldUser && !newUser) {
+      clearGuestProfile()
+      profile.value = null
+    }
+    loadProfile()
+  }, { immediate: true })
 
   // Complétion des champs optionnels (0–100%)
   const enrichmentComplete = computed(() =>

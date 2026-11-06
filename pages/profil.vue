@@ -76,7 +76,7 @@ const missingFieldsDisplay = computed(() =>
 // ─── Matchs ───────────────────────────────────────────────────────────────────
 
 const matchedShoes = computed(() =>
-  matchesStore.likedShoes
+  [...matchesStore.likedShoes]
     .sort((a, b) => b.timestamp - a.timestamp)
     .map((m) => {
       const shoe = shoes.find((s) => s.id === m.shoeId)
@@ -120,7 +120,7 @@ useSeoMeta({
 <template>
   <div class="min-h-screen bg-background">
     <!-- Nav -->
-    <nav class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
+    <nav aria-label="Navigation principale" class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-border">
       <div class="container flex items-center justify-between h-16">
         <NuxtLink to="/" class="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
           <ArrowLeft class="w-4 h-4" />
@@ -293,6 +293,9 @@ useSeoMeta({
           Aucune donnée de santé n'est enregistrée. Vous pourrez y consentir en refaisant le questionnaire.
         </p>
       </section>
+
+      <!-- ── MES DONNÉES (export + suppression de compte) ──────────────────────── -->
+      <AccountData v-if="user" />
 
       <!-- ── MON ÉQUIPEMENT ──────────────────────────────────────────────────── -->
       <MyGear v-if="user" />

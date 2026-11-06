@@ -97,7 +97,7 @@ function findColumn(headers: string[], aliases: readonly string[]): number {
 }
 
 export function parseAmazonReport(csvText: string, merchantSlug = 'amazon-fr'): AmazonParseResult {
-  const text = csvText.replace(/^﻿/, '')
+  const text = csvText.replace(/^\uFEFF/, '')
   const firstLines = text.split(/\r?\n/).slice(0, 5).join('\n')
   const delimiter = (firstLines.match(/\t/g)?.length ?? 0) > (firstLines.match(/,/g)?.length ?? 0) ? '\t' : ','
 

@@ -110,7 +110,7 @@ export async function lookupAmazonAsin(
   })
 
   const now       = new Date()
-  const amzDate   = now.toISOString().replace(/[:\-]/g, '').replace(/\.\d{3}Z$/, 'Z').slice(0, 16) + '00Z'
+  const amzDate   = now.toISOString().replace(/[:-]/g, '').replace(/\.\d{3}Z$/, 'Z').slice(0, 16) + '00Z'
   const dateStamp = amzDate.slice(0, 8)
 
   const payloadHash   = sha256(payload)

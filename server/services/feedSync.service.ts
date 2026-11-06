@@ -105,7 +105,7 @@ interface Chosen {
   item: NormalizedProductFeedItem
   shoeId: string
   extraTokens: number
-  gender: FeedGender
+  gender: Exclude<FeedGender, 'enfant'>
   /** Même lien produit (donc même coloris) que celui déjà enregistré : on le conserve d'une synchro à l'autre */
   sticky: boolean
 }

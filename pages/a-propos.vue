@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeft, Target, Zap, Shield, Heart } from 'lucide-vue-next'
 
-const router = useRouter()
 
 useHead({
   title: 'À propos — RunMatch',

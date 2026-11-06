@@ -322,7 +322,6 @@
 definePageMeta({ layout: 'admin', middleware: 'admin' })
 
 const route    = useRoute()
-const router   = useRouter()
 const supabase = useSupabaseClient()
 const shoeId   = route.params.id as string
 

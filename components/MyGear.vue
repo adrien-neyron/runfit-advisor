@@ -125,7 +125,7 @@ const anyReplaceOffer = computed(() =>
 
 onMounted(async () => {
   shoesStore.fetchShoes()
-  const { data } = await supabase.rpc('gear_models')
+  const { data } = await (supabase as any).rpc('gear_models')
   if (Array.isArray(data) && data.length) refModels.value = data as GearModel[]
 })
 </script>
@@ -187,7 +187,7 @@ onMounted(async () => {
 
     <ul class="space-y-3">
       <li v-for="s in gearStore.active" :key="s.id" class="bg-card border border-border rounded-2xl p-4">
-        <template v-for="w in [wearInfo(s.km, s.terrain, poids)]" :key="s.id + '-w'">
+        <template v-for="(w, i) in [wearInfo(s.km, s.terrain, poids)]" :key="i">
           <div class="flex items-start justify-between gap-2">
             <div class="min-w-0">
               <p class="font-bold text-sm truncate">

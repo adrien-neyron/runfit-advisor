@@ -101,10 +101,7 @@ function renderMarkdown(md: string): string {
 
       <!-- Contenu -->
       <!-- eslint-disable-next-line vue/no-v-html -->
-      <div
-        class="prose-content"
-        v-html="renderMarkdown(post?.content ?? '')"
-      />
+      <div class="prose-content" v-html="renderMarkdown(post?.content ?? '')" />
     </article>
 
     <div class="container max-w-2xl pb-16">

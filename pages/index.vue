@@ -78,7 +78,7 @@ useSeoMeta({
     </nav>
 
     <!-- Hero sticky -->
-    <section class="sticky top-0 z-0 h-screen flex items-center">
+    <section class="sticky top-0 z-0 min-h-svh flex items-center">
       <div
         class="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style="background-image: url('/hero-bg.webp')"

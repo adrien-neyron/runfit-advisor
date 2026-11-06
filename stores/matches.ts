@@ -7,7 +7,7 @@ export interface ShoeMatch {
   timestamp: number
 }
 
-// Invités : sessionStorage (perdu à la fermeture de l'onglet)
+// Invités : localStorage (conservés sur l'appareil entre les sessions, fusionnés au compte à l'inscription)
 const GUEST_KEY = 'runmatch-guest-matches'
 // Connectés : localStorage (persistant)
 const USER_KEY  = 'runmatch-user-matches'
@@ -15,7 +15,7 @@ const USER_KEY  = 'runmatch-user-matches'
 export const useMatchesStore = defineStore('matches', () => {
   const user = useSupabaseUser()
 
-  const guestMatches = useStorage<Record<string, ShoeMatch>>(GUEST_KEY, {}, sessionStorage)
+  const guestMatches = useStorage<Record<string, ShoeMatch>>(GUEST_KEY, {})
   const userMatches  = useStorage<Record<string, ShoeMatch>>(USER_KEY, {})
 
   // À la connexion : migrer les matchs invités → compte

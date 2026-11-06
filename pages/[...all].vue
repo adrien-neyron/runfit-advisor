@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { Footprints } from 'lucide-vue-next'
 
-const router = useRouter()
 
 useSeoMeta({
   title: 'Page introuvable — RunMatch',

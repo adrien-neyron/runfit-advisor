@@ -132,14 +132,14 @@ useSeoMeta({
       >
         <div class="container max-w-lg flex items-center gap-3">
           <div class="flex-1 min-w-0">
-            <p class="text-xs font-bold leading-tight">
-              {{ matchesStore.guestLikedCount }} match{{ matchesStore.guestLikedCount > 1 ? 's' : '' }} non sauvegardé{{ matchesStore.guestLikedCount > 1 ? 's' : '' }}
+            <p class="text-sm font-bold leading-tight">
+              {{ matchesStore.guestLikedCount }} match{{ matchesStore.guestLikedCount > 1 ? 's' : '' }} stocké{{ matchesStore.guestLikedCount > 1 ? 's' : '' }} sur cet appareil
             </p>
-            <p class="text-xs text-muted-foreground leading-tight mt-0.5">
-              Ferme l'onglet et tu les perds. Crée un compte, c'est gratuit.
+            <p class="text-sm text-muted-foreground leading-tight mt-0.5">
+              Crée un compte gratuit pour les retrouver partout.
             </p>
           </div>
-          <UiButton size="sm" variant="hero" class="shrink-0 gap-1.5 text-xs" to="/connexion">
+          <UiButton size="sm" variant="hero" class="shrink-0 gap-1.5 text-sm" to="/connexion">
             <UserPlus class="w-3.5 h-3.5" />
             Sauvegarder
           </UiButton>
@@ -185,6 +185,14 @@ useSeoMeta({
               <div class="w-5 h-5 rounded-full border-2 border-primary border-t-transparent animate-spin mx-auto" aria-hidden="true" />
             </div>
           </div>
+
+          <RetryNotice
+            v-if="shoesStore.fetchError"
+            class="w-full text-left"
+            message="Le catalogue en ligne est injoignable : tu vois une sélection enregistrée, certains modèles récents peuvent manquer."
+            :busy="shoesStore.loading"
+            @retry="shoesStore.retryFetch()"
+          />
 
           <!-- Pills profil -->
           <div class="flex flex-wrap gap-2 justify-center">
@@ -286,8 +294,8 @@ useSeoMeta({
           </div>
           <div v-else>
             <p class="text-muted-foreground mb-1">Aucun match cette fois.</p>
-            <p class="text-xs text-muted-foreground mb-8">
-              Refais le questionnaire pour affiner ta sélection.
+            <p class="text-sm text-muted-foreground mb-8">
+              Pas besoin de tout recommencer : ajuste un seul critère pour affiner ta sélection.
             </p>
           </div>
 
@@ -302,8 +310,19 @@ useSeoMeta({
               <Heart class="w-4 h-4" />
               Voir mes {{ matchesStore.likedShoes.length }} match{{ matchesStore.likedShoes.length !== 1 ? 's' : '' }}
             </UiButton>
+            <template v-if="matchesStore.likedShoes.length === 0">
+              <UiButton variant="hero" size="lg" to="/resultats">
+                Voir toutes mes recommandations
+              </UiButton>
+              <UiButton variant="outline" size="lg" to="/questionnaire?q=budget">
+                Changer mon budget
+              </UiButton>
+              <UiButton variant="outline" size="lg" to="/questionnaire?q=amortPreference">
+                Changer l'amorti souhaité
+              </UiButton>
+            </template>
             <UiButton variant="outline" size="lg" class="gap-2" to="/questionnaire">
-              <RotateCcw class="w-4 h-4" />
+              <RotateCcw class="w-4 h-4" aria-hidden="true" />
               Refaire le questionnaire
             </UiButton>
           </div>

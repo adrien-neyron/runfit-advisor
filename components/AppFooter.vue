@@ -2,7 +2,7 @@
   <footer class="py-8 border-t border-border">
     <div class="container flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
       <span>© 2026 RunMatch. Tous droits réservés.</span>
-      <nav class="flex flex-wrap justify-center gap-x-5 gap-y-1">
+      <nav aria-label="Pied de page" class="flex flex-wrap justify-center gap-x-5 gap-y-1">
         <NuxtLink
           to="/a-propos"
           class="hover:text-brand transition-colors underline-offset-4 hover:underline"
@@ -14,6 +14,12 @@
           class="hover:text-brand transition-colors underline-offset-4 hover:underline"
         >
           Contact
+        </NuxtLink>
+        <NuxtLink
+          to="/accessibilite"
+          class="hover:text-brand transition-colors underline-offset-4 hover:underline"
+        >
+          Accessibilité
         </NuxtLink>
         <NuxtLink
           to="/mentions-legales"

@@ -3,7 +3,6 @@ import { ArrowLeft, Heart, Trash2, Sparkles, UserPlus, LogIn, ExternalLink } fro
 import { shoes } from '~/data/shoes'
 import type { ShoeOffer } from '~/composables/useShoeOffers'
 
-const router       = useRouter()
 const matchesStore = useMatchesStore()
 const shoesStore   = useShoesStore()
 const { fetchOffers, bestOf, withSrc } = useShoeOffers()
@@ -30,7 +29,7 @@ onMounted(async () => {
 })
 
 const matchedShoes = computed(() =>
-  matchesStore.likedShoes
+  [...matchesStore.likedShoes]
     .sort((a, b) => b.timestamp - a.timestamp)
     .map((m) => {
       const shoe = shoes.find((s) => s.id === m.shoeId)
@@ -47,12 +46,6 @@ const matchedShoes = computed(() =>
     .filter(Boolean),
 )
 
-
-// Sans offre directe : on renvoie vers la fiche du modèle
-const goToShoe = (shoeId: string) => {
-  const shoe = matchedShoes.value.find((s) => s!.id === shoeId)
-  router.push(`/shoes/${shoe?.slug ?? shoeId}`)
-}
 
 useSeoMeta({
   title: 'Mes matchs — RunMatch',
@@ -104,10 +97,10 @@ useSeoMeta({
           </div>
           <div class="flex-1 min-w-0">
             <p class="text-sm font-black leading-tight">
-              Tes matchs ne sont pas sauvegardés
+              Tes matchs sont stockés sur cet appareil
             </p>
-            <p class="text-xs text-muted-foreground mt-1 leading-relaxed">
-              Ferme cet onglet et tu perds tout.
+            <p class="text-sm text-muted-foreground mt-1 leading-relaxed">
+              Ils restent ici tant que tu ne vides pas les données du navigateur.
               Crée un compte gratuit pour les retrouver sur n'importe quel appareil.
             </p>
             <div class="flex gap-2 mt-3">
@@ -181,14 +174,14 @@ useSeoMeta({
             </div>
             <div class="p-3 flex flex-col gap-2">
               <div>
-                <p class="text-xs text-muted-foreground font-medium uppercase tracking-wider">
+                <p class="text-sm text-muted-foreground font-medium uppercase tracking-wider">
                   {{ shoe!.brand }}
                 </p>
-                <h3 class="text-sm font-black leading-tight line-clamp-2 mt-0.5">{{ shoe!.model }}</h3>
+                <h2 class="text-sm font-black leading-tight line-clamp-2 mt-0.5">{{ shoe!.model }}</h2>
               </div>
 
               <!-- Marchand disponible -->
-              <p v-if="allOffers.get(shoe!.id)?.length" class="text-xs text-muted-foreground">
+              <p v-if="allOffers.get(shoe!.id)?.length" class="text-sm text-muted-foreground">
                 Disponible chez {{ allOffers.get(shoe!.id)!.map((o) => o.merchantName).join(' et ') }}
               </p>
 
@@ -197,7 +190,7 @@ useSeoMeta({
                 <span
                   v-for="tag in shoe!.tags.slice(0, 2)"
                   :key="tag"
-                  class="text-xs px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground capitalize font-medium"
+                  class="text-sm px-1.5 py-0.5 rounded-full bg-secondary text-secondary-foreground capitalize font-medium"
                 >
                   {{ tag }}
                 </span>
@@ -210,7 +203,7 @@ useSeoMeta({
                 :href="withSrc(offer.redirectUrl, 'matches')"
                 target="_blank"
                 rel="nofollow sponsored noopener noreferrer"
-                class="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                class="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
                 :class="k === 0 ? 'mt-1 bg-primary text-primary-foreground hover:bg-primary/90' : 'border-2 border-border hover:bg-secondary'"
                 :aria-label="`Voir l'offre chez ${offer.merchantName} pour ${shoe!.brand} ${shoe!.model} (s'ouvre dans un nouvel onglet)`"
               >
@@ -220,7 +213,7 @@ useSeoMeta({
               <!-- Fiche détaillée : toujours accessible, avec ou sans offre -->
               <NuxtLink
                 :to="`/shoes/${shoe!.slug ?? shoe!.id}`"
-                class="w-full flex items-center justify-center rounded-xl py-2.5 text-xs font-black border-2 border-border hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
+                class="w-full flex items-center justify-center rounded-xl py-2.5 text-sm font-black border-2 border-border hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
                 :class="allOffers.get(shoe!.id)?.length ? '' : 'mt-1'"
                 :aria-label="`Voir la fiche de ${shoe!.brand} ${shoe!.model}`"
               >

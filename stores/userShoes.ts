@@ -47,8 +47,7 @@ export const useUserShoesStore = defineStore('userShoes', () => {
 
   const add = async (input: { shoeId?: string | null; customName?: string | null; terrain: 'route' | 'trail'; km: number; purchasedOn?: string | null }) => {
     error.value = null
-    const { data, error: err } = await supabase
-      .from('user_shoes')
+    const { data, error: err } = await (supabase.from('user_shoes') as any)
       .insert({
         shoe_id: input.shoeId || null,
         custom_name: input.shoeId ? null : (input.customName ?? '').trim() || null,
@@ -65,8 +64,7 @@ export const useUserShoesStore = defineStore('userShoes', () => {
 
   const patch = async (id: string, values: Record<string, unknown>) => {
     error.value = null
-    const { error: err } = await supabase
-      .from('user_shoes')
+    const { error: err } = await (supabase.from('user_shoes') as any)
       .update({ ...values, updated_at: new Date().toISOString() })
       .eq('id', id)
     if (err) { error.value = 'Modification impossible.'; return false }

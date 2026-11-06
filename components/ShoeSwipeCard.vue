@@ -155,7 +155,7 @@ function onPointerUp() {
       <!-- Infos -->
       <div class="flex-[5] px-5 py-4 flex flex-col justify-between">
         <div>
-          <h3 class="text-xl font-black tracking-tight leading-snug">{{ shoe.model }}</h3>
+          <h2 class="text-xl font-black tracking-tight leading-snug">{{ shoe.model }}</h2>
           <!-- Étoiles de correspondance -->
           <div class="flex items-center gap-1 mt-1.5 mb-1">
             <span class="flex items-center gap-0.5" role="img" :aria-label="`Correspondance : ${starCount} sur 5`">
@@ -167,7 +167,7 @@ function onPointerUp() {
                 aria-hidden="true"
               />
             </span>
-            <span class="text-xs text-muted-foreground ml-1 font-medium">Correspondance</span>
+            <span class="text-sm text-muted-foreground ml-1 font-medium">Correspondance</span>
           </div>
           <p class="text-sm text-muted-foreground leading-relaxed">{{ shoe.description }}</p>
         </div>
@@ -176,7 +176,7 @@ function onPointerUp() {
           <span
             v-for="tag in shoe.tags.slice(0, 4)"
             :key="tag"
-            class="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium capitalize"
+            class="px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground text-sm font-medium capitalize"
           >
             {{ tag }}
           </span>
@@ -192,7 +192,7 @@ function onPointerUp() {
             :key="spec.label"
             class="text-center bg-secondary/60 rounded-xl py-2"
           >
-            <p class="text-xs text-muted-foreground uppercase tracking-wider">{{ spec.label }}</p>
+            <p class="text-sm text-muted-foreground uppercase tracking-wider">{{ spec.label }}</p>
             <p class="text-sm font-black capitalize mt-0.5">{{ spec.value }}</p>
           </div>
         </div>

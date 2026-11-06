@@ -90,7 +90,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
           :style="{ width: `${progress}%` }"
         />
       </div>
-      <span class="text-xs text-muted-foreground shrink-0 tabular-nums font-medium">
+      <span class="text-sm text-muted-foreground shrink-0 tabular-nums font-medium">
         {{ total - stack.length }}/{{ total }}
       </span>
     </div>
@@ -144,7 +144,7 @@ onBeforeUnmount(() => document.removeEventListener('keydown', onKeydown))
       </button>
     </div>
 
-    <p class="text-xs text-muted-foreground text-center">
+    <p class="text-sm text-muted-foreground text-center">
       ← Glisse pour passer · Matcher pour garder → <span class="sr-only">Au clavier : flèche gauche pour passer, flèche droite pour matcher.</span>
     </p>
   </div>

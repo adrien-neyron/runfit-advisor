@@ -5,9 +5,9 @@
 // Déclenchement manuel : POST /api/admin/conversions/sync
 // Amazon : pas d'API de ventes → import CSV depuis /admin/revenus
 
-import { isAwinApiConfigured, syncAwinConversions } from '../services/conversionSync.service'
+import { isAwinApiConfigured, syncAwinConversions, type ImportSummary } from '../services/conversionSync.service'
 
-export default defineTask({
+export default defineTask<ImportSummary | { skipped: boolean }>({
   meta: {
     name: 'syncConversions',
     description: 'Importe les transactions Awin (ventes) des 45 derniers jours',

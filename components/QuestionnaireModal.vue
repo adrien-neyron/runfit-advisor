@@ -207,6 +207,8 @@ interface Props {
   onComplete?: () => void
   /** Mode enrichissement : démarre directement aux nouvelles questions optionnelles */
   enrichmentOnly?: boolean
+  /** Démarre directement à la question indiquée (id), pour ajuster un seul critère */
+  startAt?: string
 }
 
 const props = defineProps<Props>()
@@ -231,6 +233,10 @@ const selecting         = ref(false)
 
 // Étape de départ selon le mode
 const startStep = computed(() => {
+  if (props.startAt) {
+    const target = questions.findIndex(q => q.id === props.startAt)
+    if (target >= 0) return target
+  }
   if (!props.enrichmentOnly) return 0
   const idx = questions.findIndex(q => q.id === 'volume')
   return idx >= 0 ? idx : CORE_COUNT
@@ -341,6 +347,7 @@ watch(
         : { taille: 175, poids: 70 }
     }
   },
+  { immediate: true },
 )
 
 // ─── Accessibilité de la modale (RGAA 7.x / WCAG 2.1.2, 2.4.3, 4.1.2) ─────────
@@ -795,7 +802,7 @@ const handleSelect = async (value: string) => {
                         :checked="answers[current.id] === option.value"
                         @click="onOptionClick(option.value)"
                       />
-                      <QuestionIcon v-if="option.icon" :name="option.icon" class="w-14 h-11 shrink-0 text-foreground/70" />
+                      <QuestionIcon v-if="option.icon" :name="option.icon" class="w-14 h-11 shrink-0 text-foreground/70" aria-hidden="true" />
                       <span v-else-if="option.glyph" class="w-14 h-11 shrink-0 flex items-center justify-center">
                         <component :is="option.glyph" class="w-6 h-6 text-brand" aria-hidden="true" />
                       </span>
@@ -819,6 +826,7 @@ const handleSelect = async (value: string) => {
                       <Check
                         v-if="answers[current.id] === option.value"
                         class="w-4 h-4 text-brand shrink-0"
+                        aria-hidden="true"
                       />
                     </label>
                   </fieldset>

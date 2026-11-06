@@ -54,10 +54,13 @@ export const useShoesStore = defineStore('shoes', () => {
   const dbProducts = ref<Product[]>(products)
   const loading = ref(false)
   const fetched = ref(false)
+  // true si la base n'a pas pu être lue : on affiche alors le catalogue de secours + un bouton « Réessayer »
+  const fetchError = ref(false)
 
-  const fetchShoes = async () => {
-    if (fetched.value) return
+  const fetchShoes = async (force = false) => {
+    if (fetched.value && !force) return
     loading.value = true
+    fetchError.value = false
 
     const { data, error } = await supabase
       .from('shoes')
@@ -69,6 +72,7 @@ export const useShoesStore = defineStore('shoes', () => {
       .order('brand')
 
     if (error) {
+      fetchError.value = true
       console.warn('[useShoesStore] Supabase error, using static fallback:', error.message)
     } else if (!data || data.length === 0) {
       console.warn('[useShoesStore] Empty DB, using static fallback')
@@ -82,5 +86,7 @@ export const useShoesStore = defineStore('shoes', () => {
 
   const getShoeById = (id: string) => dbProducts.value.find((p) => p.id === id) ?? null
 
-  return { dbProducts, loading, fetchShoes, getShoeById }
+  const retryFetch = () => fetchShoes(true)
+
+  return { dbProducts, loading, fetchError, fetchShoes, retryFetch, getShoeById }
 })

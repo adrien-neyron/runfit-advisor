@@ -28,6 +28,16 @@ export const useAuthStore = defineStore('auth', () => {
     return { error }
   }
 
+  // Connexion sans mot de passe. Pas de shouldCreateUser: false : Supabase renverrait une erreur
+  // pour un email inconnu, ce qui révélerait si un compte existe.
+  const signInWithMagicLink = async (email: string) => {
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: `${window.location.origin}/confirm` },
+    })
+    return { error }
+  }
+
   // Demande d'un lien de réinitialisation (la réponse ne révèle pas si le compte existe)
   const resetPassword = async (email: string) => {
     const { error } = await client.auth.resetPasswordForEmail(email, {
@@ -46,5 +56,5 @@ export const useAuthStore = defineStore('auth', () => {
     await client.auth.signOut()
   }
 
-  return { user, signIn, signUp, resendConfirmation, resetPassword, updatePassword, signOut }
+  return { user, signIn, signUp, resendConfirmation, signInWithMagicLink, resetPassword, updatePassword, signOut }
 })

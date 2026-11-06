@@ -11,6 +11,7 @@
 
 import { lookupAmazonAsin } from '~/server/services/amazonPaApi.service'
 import { requireAdmin } from '../../../utils/requireAdmin'
+import { getSupabaseAdmin } from '../../../utils/supabaseAdmin'
 
 export default defineEventHandler(async (event) => {
   await requireAdmin(event)
@@ -23,7 +24,7 @@ export default defineEventHandler(async (event) => {
   const { shoeId, gender = 'Homme' } = await readBody(event).catch(() => ({}))
 
   // Récupère les chaussures à traiter
-  const supabase = await serverSupabaseServiceClient(event)
+  const supabase = getSupabaseAdmin()
   const query    = supabase.from('shoes').select('id, brand, model')
   if (shoeId) query.eq('id', shoeId)
 

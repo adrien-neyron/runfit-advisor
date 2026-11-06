@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeft } from 'lucide-vue-next'
 
-const router = useRouter()
 
 useHead({
   title: 'Politique de confidentialité — RunMatch',

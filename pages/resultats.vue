@@ -1,13 +1,11 @@
 <script setup lang="ts">
-import { ArrowLeft, ShoppingBag, Share2, RotateCcw, Sparkles, ExternalLink } from 'lucide-vue-next'
+import { ArrowLeft, Share2, RotateCcw, Sparkles, ExternalLink } from 'lucide-vue-next'
 import { getRecommendations, type Recommendation } from '~/data/products'
 import type { ShoeOffer } from '~/composables/useShoeOffers'
 
 const router = useRouter()
-const user = useSupabaseUser()
 const profileStore = useUserProfileStore()
 const shoesStore = useShoesStore()
-const matchesStore = useMatchesStore()
 const { fetchAvailableShoeIds, fetchOffers, fetchLivePrices, bestOf, withSrc } = useShoeOffers()
 const { toast } = useToast()
 
@@ -17,28 +15,6 @@ const bestOffers = ref<Map<string, ShoeOffer>>(new Map())
 const allOffers = ref<Map<string, ShoeOffer[]>>(new Map())
 
 onMounted(() => shoesStore.fetchShoes())
-
-// Coups de cœur du swipe : toujours affichés dans les résultats, du plus récent au plus ancien
-const likedProducts = computed(() =>
-  [...matchesStore.likedShoes]
-    .sort((a, b) => b.timestamp - a.timestamp)
-    .map((m) => shoesStore.dbProducts.find((p) => p.id === m.shoeId))
-    .filter((p): p is NonNullable<typeof p> => !!p),
-)
-
-// Offres des coups de cœur (fusionnées avec celles des recommandations)
-watch(
-  () => likedProducts.value.map((p) => p.id).join(','),
-  async (joined) => {
-    const ids = joined ? joined.split(',').filter((id) => !allOffers.value.has(id)) : []
-    if (!ids.length) return
-    const offers = await fetchOffers(ids)
-    const next = new Map(allOffers.value)
-    for (const id of ids) if (offers.get(id)?.length) next.set(id, offers.get(id)!)
-    allOffers.value = next
-  },
-  { immediate: true },
-)
 
 // Calcule les recommandations quand le profil est disponible.
 // On ne recommande que des chaussures pour lesquelles un lien d'achat direct existe :
@@ -101,20 +77,8 @@ const shareResults = async () => {
   }
 }
 
-// Sans offre directe : fiche du modèle
-const goToProduct = (productId: string) => router.push(`/shoes/${productId}`)
-
 // Score ring helper
 const scorePercent = (percent: number) => Math.max(0, Math.min(100, Math.round(percent)))
-
-// Label du bouton d'achat.
-// Pas de promesse de « meilleur prix » : on n'affiche pas de prix (potentiellement périmé),
-// le marchand affiche le prix réel au moment du clic.
-const buyLabel = (productId: string) => {
-  const offer = bestOffers.value.get(productId)
-  if (!offer) return 'Voir la fiche'
-  return `Voir l'offre chez ${offer.merchantName}`
-}
 
 useSeoMeta({
   title: 'Mes recommandations — RunMatch',
@@ -142,11 +106,20 @@ useSeoMeta({
 
     <div class="pt-24 pb-16 container max-w-4xl">
       <!-- Chargement -->
-      <div v-if="profileStore.loading" class="flex items-center justify-center py-24">
-        <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      <div v-if="profileStore.loading" class="flex items-center justify-center py-24" role="status">
+        <span class="sr-only">Chargement de tes recommandations…</span>
+        <div class="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" aria-hidden="true" />
       </div>
 
       <template v-else-if="profileStore.profile">
+        <RetryNotice
+          v-if="shoesStore.fetchError"
+          class="mb-6"
+          message="Le catalogue en ligne est injoignable : ces recommandations viennent d'une sélection enregistrée."
+          :busy="shoesStore.loading"
+          @retry="shoesStore.retryFetch()"
+        />
+
         <!-- Header -->
         <div
           v-motion
@@ -177,11 +150,16 @@ useSeoMeta({
 
         <!-- Résultats vides -->
         <div v-if="recommendations.length === 0 && !profileStore.loading" class="text-center py-12">
-          <p class="text-muted-foreground text-lg mb-4">Aucune chaussure ne correspond parfaitement à ton profil.</p>
-          <UiButton variant="hero" to="/questionnaire">
-            <RotateCcw class="w-4 h-4" />
-            Recommencer
-          </UiButton>
+          <p class="text-muted-foreground text-lg mb-2">Aucune chaussure ne correspond parfaitement à ton profil.</p>
+          <p class="text-sm text-muted-foreground mb-6">Élargis un seul critère, tes autres réponses sont conservées.</p>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <UiButton variant="hero" to="/questionnaire?q=budget">Changer mon budget</UiButton>
+            <UiButton variant="outline" to="/questionnaire?q=amortPreference">Changer l'amorti souhaité</UiButton>
+            <UiButton variant="ghost" to="/questionnaire">
+              <RotateCcw class="w-4 h-4" aria-hidden="true" />
+              Tout recommencer
+            </UiButton>
+          </div>
         </div>
 
         <!-- Cards de recommandations -->
@@ -216,7 +194,7 @@ useSeoMeta({
                 <div class="flex items-start justify-between gap-4 mb-4">
                   <div>
                     <p class="text-sm text-muted-foreground font-medium">{{ rec.product.brand }}</p>
-                    <h3 class="text-2xl font-black tracking-tight">{{ rec.product.model }}</h3>
+                    <h2 class="text-2xl font-black tracking-tight">{{ rec.product.model }}</h2>
                   </div>
                   <!-- Score ring -->
                   <div class="shrink-0 flex flex-col items-center gap-1">
@@ -235,7 +213,7 @@ useSeoMeta({
                         {{ scorePercent(rec.percent) }}%
                       </span>
                     </div>
-                    <span class="text-xs font-medium text-muted-foreground uppercase tracking-wide leading-none">
+                    <span class="text-sm font-medium text-muted-foreground uppercase tracking-wide leading-none">
                       Compatibilité
                     </span>
                   </div>
@@ -254,7 +232,7 @@ useSeoMeta({
                     :key="spec.label"
                     class="text-center p-2 rounded-lg bg-secondary"
                   >
-                    <p class="text-xs text-muted-foreground">{{ spec.label }}</p>
+                    <p class="text-sm text-muted-foreground">{{ spec.label }}</p>
                     <p class="text-sm font-bold capitalize">{{ spec.value }}</p>
                   </div>
                 </div>
@@ -291,55 +269,6 @@ useSeoMeta({
           </article>
         </div>
 
-        <!-- Coups de cœur du swipe -->
-        <section v-if="likedProducts.length" class="mt-12" aria-labelledby="coups-de-coeur-title">
-          <h2 id="coups-de-coeur-title" class="text-xl font-black tracking-tight mb-1">Tes coups de cœur</h2>
-          <p class="text-sm text-muted-foreground mb-4">Les chaussures que tu as aimées en swipant.</p>
-          <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <article
-              v-for="shoe in likedProducts"
-              :key="shoe.id"
-              class="bg-card rounded-2xl border border-border overflow-hidden"
-              :aria-label="`${shoe.brand} ${shoe.model}`"
-            >
-              <div class="aspect-square bg-white overflow-hidden">
-                <ShoeImage
-                  :src="allOffers.get(shoe.id)?.[0]?.imageUrl || shoe.image"
-                  :alt="`${shoe.brand} ${shoe.model}`"
-                  class="w-full h-full object-contain p-5 mix-blend-multiply [filter:brightness(1.04)_contrast(1.03)]"
-                  loading="lazy"
-                />
-              </div>
-              <div class="p-3 flex flex-col gap-2">
-                <div>
-                  <p class="text-xs text-muted-foreground font-medium uppercase tracking-wider">{{ shoe.brand }}</p>
-                  <h3 class="text-sm font-black leading-tight line-clamp-2 mt-0.5">{{ shoe.model }}</h3>
-                </div>
-                <a
-                  v-for="(offer, k) in allOffers.get(shoe.id) ?? []"
-                  :key="offer.merchantSlug"
-                  :href="withSrc(offer.redirectUrl, 'resultats')"
-                  target="_blank"
-                  rel="nofollow sponsored noopener noreferrer"
-                  class="w-full flex items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
-                  :class="k === 0 ? 'bg-primary text-primary-foreground hover:bg-primary/90' : 'border-2 border-border hover:bg-secondary'"
-                  :aria-label="`Voir l'offre chez ${offer.merchantName} pour ${shoe.brand} ${shoe.model} (s'ouvre dans un nouvel onglet)`"
-                >
-                  <ExternalLink class="w-3 h-3 shrink-0" aria-hidden="true" />
-                  <span class="truncate">Voir chez {{ offer.merchantName }}</span>
-                </a>
-                <NuxtLink
-                  :to="`/shoes/${shoe.id}`"
-                  class="w-full flex items-center justify-center rounded-xl py-2.5 text-xs font-black border-2 border-border hover:bg-secondary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary transition-colors"
-                  :aria-label="`Voir la fiche de ${shoe.brand} ${shoe.model}`"
-                >
-                  Voir la fiche
-                </NuxtLink>
-              </div>
-            </article>
-          </div>
-        </section>
-
         <!-- Mention légale affiliés (obligatoire Amazon Associates) -->
         <AffiliateDisclosure class="text-center" :offers="[...allOffers.values()].flat()" />
 
@@ -350,7 +279,7 @@ useSeoMeta({
               <Sparkles class="w-4 h-4" />
               Mode Swipe — Découvrir 15 chaussures
             </UiButton>
-            <p class="text-xs text-muted-foreground mt-2">Swipe pour trouver ta paire idéale</p>
+            <p class="text-sm text-muted-foreground mt-2">Swipe pour trouver ta paire idéale</p>
           </div>
           <UiButton variant="ghost" to="/questionnaire">
             <RotateCcw class="w-4 h-4" />

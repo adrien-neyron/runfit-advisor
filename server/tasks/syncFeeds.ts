@@ -15,7 +15,7 @@ export default defineTask({
     description: 'Synchronise les flux produits de tous les marchands actifs',
   },
 
-  async run({ payload, context }) {
+  async run() {
     console.log('[task:syncFeeds] Démarrage de la synchronisation des flux…')
     const startMs = Date.now()
 

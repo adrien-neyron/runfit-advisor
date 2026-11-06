@@ -12,13 +12,16 @@ watchEffect(() => {
 })
 
 // ?signup=1 (lien depuis « Mes matchs ») ouvre directement l'inscription
-const mode = ref<'login' | 'signup' | 'reset'>(route.query.signup ? 'signup' : 'login')
+type AuthMode = 'login' | 'signup' | 'reset' | 'magic'
+const MIN_PASSWORD_LENGTH = 8
+const mode = ref<AuthMode>(route.query.signup ? 'signup' : 'login')
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const loading = ref(false)
 const error = ref('')
-const info = ref('')
+// ?compte-supprime=1 : confirmation persistante après une suppression de compte
+const info = ref(route.query['compte-supprime'] ? 'Ton compte et tes données ont été supprimés.' : '')
 
 // Confirmation d'inscription : écran persistant (et non un toast éphémère)
 const signupSent = ref(false)
@@ -41,7 +44,7 @@ const editSignupEmail = () => {
   resendInfo.value = ''
 }
 
-const switchMode = (next: 'login' | 'signup' | 'reset') => {
+const switchMode = (next: AuthMode) => {
   mode.value = next
   error.value = ''
   info.value = ''
@@ -61,11 +64,41 @@ const handleReset = async () => {
   info.value = 'Si un compte existe avec cet email, tu vas recevoir un lien pour choisir un nouveau mot de passe.'
 }
 
+// Lien magique : même message que le compte existe ou non (pas de fuite d'information)
+const handleMagicLink = async () => {
+  if (!email.value) {
+    error.value = 'Saisis ton adresse email.'
+    return
+  }
+  loading.value = true
+  error.value = ''
+  info.value = ''
+  const { error: otpError } = await authStore.signInWithMagicLink(email.value)
+  loading.value = false
+  if (otpError) {
+    error.value = 'Impossible d\'envoyer le lien pour le moment. Réessaie dans quelques minutes.'
+    return
+  }
+  info.value = 'Lien envoyé. Ouvre l\'email reçu pour te connecter, pense à vérifier tes courriers indésirables.'
+}
+
+// La consigne est lue avant la saisie (aria-describedby) et rappelée dans l'erreur
+const passwordDescribedBy = computed(() => {
+  const ids = [mode.value === 'signup' ? 'password-hint' : '', error.value ? 'auth-error' : ''].filter(Boolean)
+  return ids.length ? ids.join(' ') : undefined
+})
+
 const handleSubmit = async () => {
   if (mode.value === 'reset') return handleReset()
+  if (mode.value === 'magic') return handleMagicLink()
 
   if (!email.value || !password.value) {
     error.value = 'Remplis tous les champs.'
+    return
+  }
+
+  if (mode.value === 'signup' && password.value.length < MIN_PASSWORD_LENGTH) {
+    error.value = `Le mot de passe doit contenir au moins ${MIN_PASSWORD_LENGTH} caractères.`
     return
   }
 
@@ -143,10 +176,10 @@ useSeoMeta({
           RUN<span class="text-gradient">MATCH</span>
         </NuxtLink>
         <h1 class="text-xl font-black mt-4">
-          {{ mode === 'login' ? 'Connexion' : mode === 'signup' ? 'Créer un compte' : 'Mot de passe oublié' }}
+          {{ { login: 'Connexion', signup: 'Créer un compte', reset: 'Mot de passe oublié', magic: 'Connexion par lien email' }[mode] }}
         </h1>
         <p class="text-sm text-muted-foreground mt-1">
-          {{ mode === 'login' ? 'Bon retour parmi nous !' : mode === 'signup' ? 'Rejoins RunMatch gratuitement' : 'Saisis ton email, on t\'envoie un lien pour en choisir un nouveau.' }}
+          {{ { login: 'Bon retour parmi nous !', signup: 'Rejoins RunMatch gratuitement', reset: 'Saisis ton email, on t\'envoie un lien pour en choisir un nouveau.', magic: 'Saisis ton email, on t\'envoie un lien pour te connecter sans mot de passe.' }[mode] }}
         </p>
       </div>
 
@@ -172,8 +205,11 @@ useSeoMeta({
         </div>
 
         <!-- Mot de passe -->
-        <div v-if="mode !== 'reset'" class="space-y-1.5">
+        <div v-if="mode === 'login' || mode === 'signup'" class="space-y-1.5">
           <label for="password" class="text-sm font-medium">Mot de passe</label>
+          <p v-if="mode === 'signup'" id="password-hint" class="text-sm text-muted-foreground">
+            {{ MIN_PASSWORD_LENGTH }} caractères minimum.
+          </p>
           <div class="relative">
             <Lock class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
             <input
@@ -183,7 +219,7 @@ useSeoMeta({
               :autocomplete="mode === 'login' ? 'current-password' : 'new-password'"
               required
               :aria-invalid="error ? 'true' : undefined"
-              :aria-describedby="error ? 'auth-error' : undefined"
+              :aria-describedby="passwordDescribedBy"
               placeholder="••••••••"
               class="w-full h-10 pl-9 pr-11 rounded-xl border border-border bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             />
@@ -200,10 +236,17 @@ useSeoMeta({
           </div>
         </div>
 
-        <div v-if="mode === 'login'" class="text-right -mt-2">
+        <div v-if="mode === 'login'" class="flex flex-wrap justify-between gap-x-4 gap-y-1 -mt-2">
           <button
             type="button"
-            class="text-sm text-brand font-medium hover:underline rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            class="text-sm text-brand font-medium hover:underline rounded py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+            @click="switchMode('magic')"
+          >
+            Recevoir un lien de connexion
+          </button>
+          <button
+            type="button"
+            class="text-sm text-brand font-medium hover:underline rounded py-1 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
             @click="switchMode('reset')"
           >
             Mot de passe oublié ?
@@ -222,12 +265,12 @@ useSeoMeta({
             <span class="w-4 h-4 rounded-full border-2 border-current/30 border-t-current animate-spin" aria-hidden="true" />
             <span class="sr-only">Connexion en cours…</span>
           </template>
-          <span v-else>{{ mode === 'login' ? 'Se connecter' : mode === 'signup' ? 'Créer mon compte' : 'Envoyer le lien' }}</span>
+          <span v-else>{{ { login: 'Se connecter', signup: 'Créer mon compte', reset: 'Envoyer le lien', magic: 'Envoyer le lien' }[mode] }}</span>
         </UiButton>
       </form>
 
       <!-- Basculer connexion / inscription / retour -->
-      <p v-if="mode !== 'reset'" class="text-center text-sm text-muted-foreground mt-6">
+      <p v-if="mode === 'login' || mode === 'signup'" class="text-center text-sm text-muted-foreground mt-6">
         {{ mode === 'login' ? 'Pas encore de compte ?' : 'Déjà un compte ?' }}
         <button
           type="button"
