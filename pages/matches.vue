@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ArrowLeft, Heart, Trash2, Sparkles, UserPlus, LogIn, ExternalLink } from 'lucide-vue-next'
-import { shoes } from '~/data/shoes'
+import { shoes, buildTags, type Shoe } from '~/data/shoes'
 import type { ShoeOffer } from '~/composables/useShoeOffers'
 
 const matchesStore = useMatchesStore()
@@ -28,24 +28,19 @@ onMounted(async () => {
   }
 })
 
-const matchedShoes = computed(() =>
+// Le catalogue de référence est celui de la base (les nouveaux modèles n'existent pas dans la liste statique).
+// La liste statique ne sert que de secours.
+const matchedShoes = computed<Shoe[]>(() =>
   [...matchesStore.likedShoes]
     .sort((a, b) => b.timestamp - a.timestamp)
-    .map((m) => {
-      const shoe = shoes.find((s) => s.id === m.shoeId)
-      if (!shoe) return null
-      // Priorité à l'image CDN Storage, fallback sur la donnée statique
-      const dbProduct = shoesStore.dbProducts.find((s) => s.id === m.shoeId)
-      return {
-        ...shoe,
-        // Photo du marchand (variante exacte du lien) en priorité, puis catalogue
-        image: bestOffers.value.get(m.shoeId)?.imageUrl || (dbProduct ? dbProduct.image : shoe.image),
-        prix: dbProduct?.prix ?? shoe.prix,  // prix temps réel si dispo
-      }
-    })
-    .filter(Boolean),
+    .flatMap((m) => {
+      const db = shoesStore.dbProducts.find((s) => s.id === m.shoeId)
+      const base: Shoe | undefined = db ? { ...db, slug: db.id, tags: buildTags(db) } : shoes.find((s) => s.id === m.shoeId)
+      if (!base) return []
+      // Photo du marchand (variante exacte du lien) en priorité, puis catalogue
+      return [{ ...base, image: bestOffers.value.get(m.shoeId)?.imageUrl || base.image }]
+    }),
 )
-
 
 useSeoMeta({
   title: 'Mes matchs — RunMatch',
